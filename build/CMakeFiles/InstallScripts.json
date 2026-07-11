@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/turiing/Backend/build/cmake_install.cmake",
+		"/Users/turiing/Backend/build/3rd/cmake_install.cmake",
+		"/Users/turiing/Backend/build/3rd/Utils/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
