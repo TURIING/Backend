@@ -120,11 +120,22 @@ Backend/
 │   └── Utils/ (submodule)
 ├── include/
 │   └── Backend/            ← Backend 公共头文件
-└── src/
-    └── Backend.cpp         ← Backend 源文件（无独立 CMakeLists.txt）
+├── src/
+│   └── Backend.cpp         ← Backend 源文件（无独立 CMakeLists.txt）
+└── bin/                    ← 构建最终产物（.a，被 gitignore）
 ```
 
 顶层 CMakeLists.txt 承担项目配置、依赖调度、Backend 库定义三合一角色。src/ 目录仅存放源文件，不包含 CMakeLists.txt。依赖关系清晰：3rd 构建第三方库并通过变量传递 target 列表，顶层将变量注入 Backend 的链接依赖。
+
+### 8. 构建产物输出目录：bin/
+
+```cmake
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)   # .a 静态库
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)   # .so/.dylib
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)   # 可执行文件
+```
+
+中间产物（.o、Makefile、CMake 缓存等）留在 `build/`，最终产物（.a、可执行文件）集中到 `bin/`。两者都被 `.gitignore` 忽略，不纳入版本控制。
 
 ## Risks / Trade-offs
 

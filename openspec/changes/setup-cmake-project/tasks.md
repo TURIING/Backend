@@ -34,4 +34,11 @@
 
 - [x] 7.1 创建 `.gitignore`，忽略 `build/`、`.DS_Store`、`*.o`、`*.a` 等构建产物和系统文件
 - [x] 7.2 从 git 跟踪中移除已误提交的文件（`git rm --cached -r build/`、`git rm --cached .DS_Store`）
-- [ ] 7.3 提交 `.gitignore` 和清理变更
+- [x] 7.3 提交 `.gitignore` 和清理变更
+
+## 8. 构建产物输出到 bin/
+
+- [x] 8.1 在顶层 `CMakeLists.txt` 中配置 `CMAKE_ARCHIVE_OUTPUT_DIRECTORY`、`CMAKE_LIBRARY_OUTPUT_DIRECTORY`、`CMAKE_RUNTIME_OUTPUT_DIRECTORY` 指向 `${CMAKE_SOURCE_DIR}/bin`
+- [x] 8.2 在 `.gitignore` 中添加 `bin/`
+- [x] 8.3 重新构建验证产物输出到 `bin/`
+- [ ] 8.4 提交变更

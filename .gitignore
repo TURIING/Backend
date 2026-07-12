@@ -4,6 +4,7 @@
 
 # CMake build output
 build/
+bin/
 
 # Object files
 *.o
