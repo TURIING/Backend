@@ -25,7 +25,13 @@
 
 ## 6. GLOB_RECURSE
 
-- [ ] 6.1 更新顶层 `CMakeLists.txt`：`file(GLOB_RECURSE BACKEND_SOURCES src/*.cpp)` + `add_library(Backend STATIC ${BACKEND_SOURCES})`
-- [ ] 6.2 更新 `3rd/Utils/CMakeLists.txt`：`file(GLOB_RECURSE UTILS_SOURCES src/*.cpp)` + `add_library(Utils STATIC ${UTILS_SOURCES})`
-- [ ] 6.3（Utils 仓库）提交并推送 Utils CMakeLists.txt 变更
-- [ ] 6.4 重新验证 CMake 构建
+- [x] 6.1 更新顶层 `CMakeLists.txt`：`file(GLOB_RECURSE BACKEND_SOURCES src/*.cpp)` + `add_library(Backend STATIC ${BACKEND_SOURCES})`
+- [x] 6.2 更新 `3rd/Utils/CMakeLists.txt`：`file(GLOB_RECURSE UTILS_SOURCES src/*.cpp)` + `add_library(Utils STATIC ${UTILS_SOURCES})`
+- [x] 6.3（Utils 仓库）提交并推送 Utils CMakeLists.txt 变更
+- [x] 6.4 重新验证 CMake 构建
+
+## 7. 项目清理与 .gitignore
+
+- [x] 7.1 创建 `.gitignore`，忽略 `build/`、`.DS_Store`、`*.o`、`*.a` 等构建产物和系统文件
+- [x] 7.2 从 git 跟踪中移除已误提交的文件（`git rm --cached -r build/`、`git rm --cached .DS_Store`）
+- [ ] 7.3 提交 `.gitignore` 和清理变更
