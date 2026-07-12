@@ -41,4 +41,4 @@
 - [x] 8.1 在顶层 `CMakeLists.txt` 中配置 `CMAKE_ARCHIVE_OUTPUT_DIRECTORY`、`CMAKE_LIBRARY_OUTPUT_DIRECTORY`、`CMAKE_RUNTIME_OUTPUT_DIRECTORY` 指向 `${CMAKE_SOURCE_DIR}/bin`
 - [x] 8.2 在 `.gitignore` 中添加 `bin/`
 - [x] 8.3 重新构建验证产物输出到 `bin/`
-- [ ] 8.4 提交变更
+- [x] 8.4 提交变更

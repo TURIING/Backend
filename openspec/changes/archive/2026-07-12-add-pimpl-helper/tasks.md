@@ -12,5 +12,5 @@
 
 ## 4. Utils 仓库提交
 
-- [ ] 4.1 在 Utils 子模块中提交并推送变更
-- [ ] 4.2 在 Backend 仓库中更新 submodule 引用并提交
+- [x] 4.1 在 Utils 子模块中提交并推送变更
+- [x] 4.2 在 Backend 仓库中更新 submodule 引用并提交

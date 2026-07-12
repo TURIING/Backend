@@ -20,6 +20,7 @@
 | 枚举值 | `PascalCase` | `Red` |
 | 命名空间 | `snake_case` | `my_project` |
 | 宏 | `UPPER_SNAKE_CASE` | `MY_VERSION` |
+| 文件名 | `PascalCase`，头文件与cpp文件同名即可 | `Header.h` 、 `Header.cpp` |
 
 # 头文件
 
