@@ -1,3 +1,6 @@
 [submodule "3rd/Utils"]
 	path = 3rd/Utils
 	url = git@github.com:TURIING/Utils.git
+[submodule "3rd/volk"]
+	path = 3rd/volk
+	url = https://github.com/zeux/volk.git
