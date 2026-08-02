@@ -9,10 +9,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
+set(BACKEND_MACRO_DEFINE BACKEND_DEBUG_FLAG)
+
 add_subdirectory(3rd)
 
 file(GLOB_RECURSE BACKEND_SOURCES src/*.cpp)
 add_library(Backend STATIC ${BACKEND_SOURCES})
 target_include_directories(Backend PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_compile_definitions(Backend PUBLIC VK_NO_PROTOTYPES)
+target_include_directories(Backend PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(Backend PUBLIC ${THIRD_PARTY_LIBS})
+target_compile_definitions(Backend PUBLIC ${BACKEND_MACRO_DEFINE})

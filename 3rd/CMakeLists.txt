@@ -1,5 +1,5 @@
+include(volk.cmake)
 add_subdirectory(Utils)
-add_subdirectory(volk)
 set(THIRD_PARTY_LIBS
     Utils
     volk

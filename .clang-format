@@ -1,0 +1,38 @@
+---
+BasedOnStyle: Google                                     # 以 Google 默认风格为基底，再按项目风格覆盖
+Language: Cpp                                            # 仅对 C/C++ 文件生效
+Standard: c++20                                          # 按 C++20 标准解析语法
+
+AccessModifierOffset: -4                                 # 访问修饰符缩进
+IndentWidth: 4                                           # 缩进宽度：4 空格
+TabWidth: 4                                              # tab 字符对应的宽度
+UseTab: Never                                            # 禁止使用 tab，统一用空格
+ContinuationIndentWidth: 4                               # 续行缩进宽度：4 空格
+SpacesInContainerLiterals: true
+Cpp11BracedListStyle: false
+
+ColumnLimit: 120                                         # 单行最大 120 列
+
+AlignConsecutiveDeclarations:                            # 对齐连续声明
+  Enabled: true                                          # 启用
+  AcrossEmptyLines: false                                # 不跨空行对齐
+  AcrossComments: false                                  # 不跨注释对齐
+
+AlignConsecutiveAssignments:                             # 对齐连续赋值
+  Enabled: true                                          # 启用
+  AcrossEmptyLines: false                                # 不跨空行对齐
+  AcrossComments: false                                  # 不跨注释对齐
+
+PointerAlignment: Left                                   # 指针星号靠左
+
+SortIncludes: true                                       # 启用 include 排序
+IncludeBlocks: Regroup                                   # 按分类重排 include 块
+IncludeCategories:                                       # 排序优先级（对齐 code-style.md：本项目 → 第三方 → 标准库）
+  - Regex: '^"Backend/'                                  # 项目公共头（include/Backend/...）
+    Priority: 1
+  - Regex: '^"(?!Utils/)'                                # 项目私有头（src/ 下的引号头）
+    Priority: 2
+  - Regex: '^"Utils/'                                    # 第三方（Utils 子模块）
+    Priority: 3
+  - Regex: '^<'                                          # C++ 标准库 / C 库
+    Priority: 4
