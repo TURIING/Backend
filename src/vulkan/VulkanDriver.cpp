@@ -1,0 +1,16 @@
+#include "VulkanDriver.h"
+
+#include "Backend/platform/VulkanPlatform.h"
+
+BEGIN_NS_BACKEND
+
+DriverPtr VulkanDriver::Create(VulkanPlatform *platform, VulkanContext &context,
+                               const DriverConfig &config) {
+    // TODO: 完整 Driver 实现
+    (void)platform;
+    (void)context;
+    (void)config;
+    return DriverPtr(new VulkanDriver());
+}
+
+END_NS_BACKEND
