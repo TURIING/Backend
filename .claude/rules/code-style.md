@@ -1,51 +1,13 @@
 # 代码编写原则
-- 第三方库一律使用`git submodule`的方式获取，并存放在3rd/
+- 第三方库一律使用`git submodule`的方式获取，并存放在`3rd/`
 - 代码注释规范
   - 每个函数（除了get、set等简单明了的函数外）都应在头文件文件里写上函数注释
   - 需要在头文件里写上类注释
-  - 函数体内注释仅在逻辑复杂时怕用户看不懂才写，注意！
+  - 函数体内注释：仅在以下情形写，且只解释"为什么/意图"，不解释"代码在做什么"
+    - 非平凡逻辑：指针/位运算、算法关键步骤、状态机转移、内存布局或对齐
+    - 隐含约束或前置条件：调用顺序、线程模型、生命周期要求
+    - 反直觉写法：性能考量、平台差异、兼容性处理
+    - 禁止：逐行复述代码行为、显而易见操作的说明、与代码重复的注释
+    - 自检：写每条注释前先问"这行逻辑读者 5 秒内能看懂吗？" 能看懂就不写
 - 代码编写风格
   - 尽量封装可复用的代码，比如利用宏定义、template等
-
-# 命名
-
-| 种类 | 风格 | 示例 |
-|------|------|------|
-| 类/结构体 | `PascalCase` | `UserManager` |
-| 公有函数/成员函数 | `PascalCase` | `GetName()` |
-| 静态变量 | `sPascalCase` | `sGetName()` |
-| 变量 | `camelCase` | `userCount` |
-| 私有成员变量 | `m_camelCase` | `m_name`、`m_pPointer` |
-| 常量 | `kPascalCase` | `kMaxSize` |
-| 枚举值 | `PascalCase` | `Red` |
-| 命名空间 | `snake_case` | `my_project` |
-| 宏 | `UPPER_SNAKE_CASE` | `MY_VERSION` |
-| 文件名 | `PascalCase`，头文件与cpp文件同名即可 | `Header.h` 、 `Header.cpp` |
-
-# 头文件
-
-| 规则 | 说明 |
-|------|------|
-| 头文件保护 | `#pragma once` |
-| Include 顺序 | 本项目 `.h` → 本项目 `""` → 第三方 → C++ 标准库 → C 库，组间空行 |
-
-# 类
-
-| 规则 | 说明 |
-|------|------|
-| 声明顺序 | `public` → `protected` → `private`，成员变量放最后 |
-| 变量暴露方式 | 私有变量供外部使用一律使用`getter`方法获取，而非直接public变量 |
-
-# 现代 C++
-
-| 规则 | 说明 |
-|------|------|
-| C++标准 | C++20 |
-| 空指针 | `nullptr`，不用 `NULL`/`0` |
-| 常量 | `constexpr`，不用宏 |
-| 枚举 | `enum class`，不用裸 enum |
-| 类型别名 | `using`，不用 `typedef` |
-| 类型转换 | `static_cast`/`dynamic_cast`，不用 C 风格 |
-
-# cmake
-- 添加代码文件要使用`file GLOB_RECURSE`的方式，不能一个一个添加
