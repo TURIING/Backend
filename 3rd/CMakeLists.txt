@@ -2,6 +2,6 @@ include(volk.cmake)
 add_subdirectory(Utils)
 set(THIRD_PARTY_LIBS
     Utils
-    volk
+    ${VOLK_TARGET_NAME}
     CACHE INTERNAL "Third-party library targets"
 )
