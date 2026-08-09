@@ -1,0 +1,21 @@
+CompileFlags:
+  CompilationDatabase: build
+
+Index:
+  Background: Build
+
+Diagnostics:
+  ClangTidy:
+    Add: 
+      - modernize*
+      - performance*
+      - bugprone*
+    Remove:
+      - modernize-use-trailing-return-type
+      - bugprone-easily-swappable-parameters
+
+  Suppress:
+    - unused-includes
+
+InlayHints:
+  Enabled: true
