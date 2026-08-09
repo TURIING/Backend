@@ -18,3 +18,5 @@
 #if defined(PLATFORM_WINDOWS) || defined(PLATFORM_ANDROID) || defined(PLATFORM_APPLE)
 #define BACKEND_SUPPORT_VULKAN 1
 #endif
+
+#define NODISCARD [[nodiscard]]
