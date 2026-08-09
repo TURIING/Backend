@@ -24,13 +24,9 @@ class VulkanPlatform : public Platform, public NS_UTILS::Impl<VulkanPlatformPriv
 public:
     using ExtensionSet = std::unordered_set<std::string>;
 
-    /**
-     * 平台定制项
-     */
+    // 平台定制项
     struct Customization {
-        /**
-         * GPU 偏好：可通过设备名子串或设备列表下标指定
-         */
+        // GPU 偏好：可通过设备名子串或设备列表下标指定
         struct GPUPreference {
             std::string deviceName;
             int8_t      index = -1;
@@ -63,11 +59,6 @@ public:
      */
     virtual VkSurfaceKHR createVkSurfaceKHR(void *nativeWindow, VkInstance instance, uint64_t flags) const noexcept = 0;
 
-    /**
-     * @brief 返回当前实例可用的扩展列表（过滤掉不可用的目标扩展）
-     * @param externallyRequiredExts 上层额外要求的扩展
-     * @return 实际可用的扩展名集合
-     */
     ExtensionSet getInstanceExtensions(ExtensionSet const &externallyRequiredExts = {});
 
 private:

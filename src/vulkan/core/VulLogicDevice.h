@@ -17,18 +17,14 @@ class VulLogicDevice final : public VulObject<VkDevice> {
     struct BuilderDetails;
 
 public:
-    /**
-     * 创建设备时应请求的额外特性
-     */
+    // 创建设备时应请求的额外特性
     struct MiscDeviceFeatures {
-        bool dynamicRendering        = false; //!< 允许创建无 render pass 的 VkGraphicsPipeline
-        bool imageView2Don3DImage    = false; //!< 允许从 3D VkImage 创建 2D image view
+        bool dynamicRendering        = false; // 允许创建无 render pass 的 VkGraphicsPipeline
+        bool imageView2Don3DImage    = false; // 允许从 3D VkImage 创建 2D image view
         GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
     };
 
-    /**
-     * 创建信息（Builder 模式）
-     */
+    // 创建信息（Builder 模式）
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct VulLogicDevice::BuilderDetails;
 
@@ -44,14 +40,6 @@ public:
         VulLogicDevicePtr Build();
     };
 
-    /**
-     * @param device                          已创建的 VkDevice
-     * @param shared                          是否为共享设备（共享时不销毁）
-     * @param graphicsQueueFamilyIndex        graphics 队列族下标
-     * @param graphicsQueueIndex              graphics 队列下标
-     * @param protectedGraphicsQueueFamilyIndex protected 队列族下标（无则 INVALID_VK_INDEX）
-     * @param protectedGraphicsQueueIndex     protected 队列下标
-     */
     explicit VulLogicDevice(VkDevice device, bool shared,
                             uint32_t graphicsQueueFamilyIndex, uint32_t graphicsQueueIndex,
                             uint32_t protectedGraphicsQueueFamilyIndex,

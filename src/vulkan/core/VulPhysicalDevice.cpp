@@ -29,7 +29,7 @@ inline int DeviceTypeOrder(VkPhysicalDeviceType deviceType) {
     return -1;
 }
 
-}  // namespace
+}
 
 // Builder 配置数据
 struct VulPhysicalDevice::BuilderDetails {
@@ -113,7 +113,6 @@ VulPhysicalDevicePtr VulPhysicalDevice::Builder::Build() {
 
     LOG_ASSERT(m_pImpl->m_index < static_cast<int32_t>(deviceList.size()));
 
-    // 对设备列表排序
     std::sort(deviceList.begin(), deviceList.end(),
         [this](DeviceInfo const &a, DeviceInfo const &b) {
             if (b.device == VK_NULL_HANDLE) {

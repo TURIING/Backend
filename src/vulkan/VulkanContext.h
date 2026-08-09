@@ -8,13 +8,6 @@ BEGIN_NS_BACKEND
 // 设备/实例上下文的不变数据集合（实际句柄存储于 VulkanPlatform）。
 class VulkanContext : public NS_UTILS::Ref {
 public:
-    /**
-     * @brief 选择满足 reqs 内存属性的内存类型下标
-     * @param memoryProperties 设备内存属性
-     * @param types 候选内存类型位掩码
-     * @param reqs 需要的内存属性位
-     * @return 内存类型下标，无匹配时返回 VK_MAX_MEMORY_TYPES
-     */
     static uint32_t SelectMemoryType(VkPhysicalDeviceMemoryProperties const &memoryProperties, uint32_t types,
                                      VkFlags reqs) {
         for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
@@ -28,9 +21,6 @@ public:
         return (uint32_t)VK_MAX_MEMORY_TYPES;
     }
 
-    /**
-     * @brief 基于本上下文的内存属性选择内存类型
-     */
     inline uint32_t SelectMemoryType(uint32_t types, VkFlags reqs) const {
         return SelectMemoryType(m_memoryProperties, types, reqs);
     }

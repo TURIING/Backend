@@ -15,9 +15,7 @@ class VulInstance final : public VulObject<VkInstance> {
     struct BuilderDetails;
 
 public:
-    /**
-     * 创建信息（Builder 模式）
-     */
+    // 创建信息（Builder 模式）
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct VulInstance::BuilderDetails;
 
@@ -29,10 +27,6 @@ public:
         VulInstancePtr Build();
     };
 
-    /**
-     * @param instance 已创建的 VkInstance
-     * @param shared   是否为共享实例（共享时不销毁）
-     */
     explicit VulInstance(VkInstance instance, bool shared = false);
     ~VulInstance() override;
 

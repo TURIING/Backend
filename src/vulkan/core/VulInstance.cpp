@@ -39,7 +39,7 @@ std::vector<const char *> GetEnabledLayers() {
 }
 #endif  // BVK_ENABLED(BVK_DEBUG_VALIDATION)
 
-}  // namespace
+}
 
 // Builder 配置数据
 struct VulInstance::BuilderDetails {

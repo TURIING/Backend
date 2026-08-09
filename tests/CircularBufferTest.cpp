@@ -25,7 +25,7 @@ bool checkPattern(char const* const begin, size_t const count, uint8_t const see
     return true;
 }
 
-} // namespace
+}
 
 // ============================================================================
 // 初始状态

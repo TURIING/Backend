@@ -16,9 +16,7 @@ class VulPhysicalDevice final : public VulObject<VkPhysicalDevice> {
     struct BuilderDetails;
 
 public:
-    /**
-     * 创建信息（Builder 模式）
-     */
+    // 创建信息（Builder 模式）
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct VulPhysicalDevice::BuilderDetails;
 
@@ -30,9 +28,6 @@ public:
         VulPhysicalDevicePtr Build();
     };
 
-    /**
-     * @param device 选中的 VkPhysicalDevice
-     */
     explicit VulPhysicalDevice(VkPhysicalDevice device);
 };
 

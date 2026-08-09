@@ -14,9 +14,7 @@ class VulQueue final : public VulObject<VkQueue> {
     struct BuilderDetails;
 
 public:
-    /**
-     * 创建信息（Builder 模式）
-     */
+    // 创建信息（Builder 模式）
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
 
@@ -30,9 +28,6 @@ public:
         VulQueuePtr Build();
     };
 
-    /**
-     * @param queue 已获取的 VkQueue
-     */
     explicit VulQueue(VkQueue queue);
 };
 

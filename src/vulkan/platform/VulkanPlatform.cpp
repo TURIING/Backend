@@ -115,7 +115,6 @@ ExtensionSet getDeviceExtensions(VulPhysicalDevicePtr const &device) {
     };
 
     ExtensionSet exts;
-    // 枚举物理设备支持的扩展
     std::vector<VkExtensionProperties> const extensions = VK_UTILS::enumerate(
         vkEnumerateDeviceExtensionProperties, device->GetHandle(), static_cast<char const *>(nullptr) /* pLayerName */);
     for (auto const &extension : extensions) {
@@ -133,7 +132,6 @@ ExtensionSet getDeviceExtensions(VulPhysicalDevicePtr const &device) {
     return exts;
 }
 
-// 根据外部因素（驱动/设备 workaround）启用/禁用扩展
 std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VulPhysicalDevicePtr const &device,
                                                        DriverConfig const &driverConfig, ExtensionSet const &instExts,
                                                        ExtensionSet const &deviceExts) noexcept {
@@ -207,7 +205,6 @@ VkFormatList findBlittableDepthStencilFormats(VulPhysicalDevicePtr const &device
     return selectedFormats;
 }
 
-// 检查 GPU 是否为统一内存架构（UMA）
 bool hasUnifiedMemoryArchitecture(VkPhysicalDeviceMemoryProperties memoryProperties) noexcept {
     for (uint32_t i = 0; i < memoryProperties.memoryHeapCount; ++i) {
         if ((memoryProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) == 0) {
@@ -217,7 +214,7 @@ bool hasUnifiedMemoryArchitecture(VkPhysicalDeviceMemoryProperties memoryPropert
     return true;
 }
 
-}  // anonymous namespace
+}
 
 struct VulkanPlatformPrivate {
     VulInstancePtr       m_pInstance;
@@ -256,7 +253,6 @@ DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareCo
 }
 
 void VulkanPlatform::initRuntime(void *shareContext) {
-    // 加载 Vulkan 入口函数
     if (volkInitialize() != VK_SUCCESS) {
         LOG_CRITICAL("volkInitialize() failed");
     }

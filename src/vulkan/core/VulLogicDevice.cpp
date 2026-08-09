@@ -25,7 +25,7 @@ VkQueueGlobalPriorityKHR GetVkQueueGlobalPriority(GpuContextPriority priority) {
     return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
 }
 
-}  // namespace
+}
 
 // Builder 配置数据
 struct VulLogicDevice::BuilderDetails {

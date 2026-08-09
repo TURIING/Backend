@@ -7,18 +7,10 @@
 
 BEGIN_NS_BACKEND
 
-// Vulkan 工具函数命名空间。
-// 注意：文件中的宏（CALL_VK / ENUM_TO_STR / EXPAND_ENUM 等）属于预处理器层面，不受命名空间影响。
+// 文件中的宏（CALL_VK / ENUM_TO_STR / EXPAND_ENUM 等）属于预处理器层面，不受命名空间影响
 namespace VK_UTILS {
 
-/**
- * @brief 将 structB 链入 structA 的 pNext，用于 Vulkan 结构体链式扩展
- * @tparam StructA 链头结构体
- * @tparam StructB 追加的结构体（须含 pNext 成员）
- * @param structA 链头
- * @param structB 要追加的结构体
- * @return structA
- */
+// 将 structB 链入 structA 的 pNext，用于 Vulkan 结构体链式扩展
 template <typename StructA, typename StructB>
 StructA *chainStruct(StructA *structA, StructB *structB) {
     structB->pNext = const_cast<void *>(structA->pNext);
@@ -26,12 +18,6 @@ StructA *chainStruct(StructA *structA, StructB *structB) {
     return structA;
 }
 
-/**
- * @brief 查找支持指定队列标志的队列族下标
- * @param device 物理设备
- * @param flags  需要的队列能力标志
- * @return 队列族下标，无匹配时返回 UINT32_MAX
- */
 inline uint32_t IdentifyGraphicsQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
     uint32_t queueFamiliesCount;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
@@ -51,11 +37,6 @@ inline uint32_t IdentifyGraphicsQueueFamilyIndex(VkPhysicalDevice device, VkQueu
     return graphicsQueueFamilyIndex;
 }
 
-/**
- * @brief 判断是否为深度格式
- * @param format 要判断的格式
- * @return true 表示深度格式（含 depth-stencil）
- */
 inline bool IsVkDepthFormat(VkFormat format) {
     switch (format) {
         case VK_FORMAT_D16_UNORM:
@@ -107,12 +88,12 @@ static const char *vk_result_string(VkResult code) {
         ENUM_TO_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE);
 #endif
 #ifdef VK_VERSION_1_2
-        ENUM_TO_STR(VK_ERROR_UNKNOWN);  // Only defined in 1.2 and above headers.
+        ENUM_TO_STR(VK_ERROR_UNKNOWN);  // 仅在 1.2 及以上版本的头文件中定义
         ENUM_TO_STR(VK_ERROR_FRAGMENTATION);
         ENUM_TO_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
 #else
         case -13 /* VK_ERROR_UNKNOWN */:
-            return "VK_ERROR_UNKNOWN";  // Has no guard.
+            return "VK_ERROR_UNKNOWN";  // 该枚举无版本守卫宏，直接列出
 #endif
 #ifdef VK_VERSION_1_3
         ENUM_TO_STR(VK_PIPELINE_COMPILE_REQUIRED);
@@ -225,6 +206,6 @@ std::vector<OutType> enumerate(VKAPI_ATTR VkResult (*func)(InTypeA, InTypeB, uin
     EXPAND_ENUM_ARGS(inDataA, inDataB);
 }
 
-}  // namespace VK_UTILS
+}
 
 END_NS_BACKEND
