@@ -39,18 +39,15 @@
 | 枚举 | `enum class`，不用裸 enum |
 | 类型别名 | `using`，不用 `typedef` |
 | 类型转换 | `static_cast`/`dynamic_cast`，不用 C 风格 |
+| 返回值不可忽略 | 函数返回值不应被丢弃时使用 `[[nodiscard]]`（如错误码、句柄、状态查询等） |
 
-## 代码复用
-
+## 代码封装抽象
 - 魔法数字、重复字符串不散落字面量：定义为 `constexpr` 常量（`kPascalCase`）后复用
   - 反例：`m_capacity = 256;` 与 `new char[256]` 散落，256 含义不明
   - 正例：`constexpr size_t kCapacity = 256;` 定义一次，各处引用 `kCapacity`
 - 简短重复的操作（函数/template 无法简洁表达时）定义为宏（`UPPER_SNAKE_CASE`）复用
   - 反例：对齐计算 `(x + 15) & ~15u` 重复写多遍
   - 正例：`#define ALIGN_UP(v, a) (((v) + ((a) - 1)) & ~((a) - 1))` 一处定义、多处调用
-
-## 代码封装抽象
-
 - 函数体的执行内容必须与函数名一致：函数只做名称所表达的一件事，不做名外之事
   - 反例：`Update()` 名为"更新"却顺带做了资源加载、日志落盘、网络同步，名不副实
   - 正例：`Update()` 只更新状态，资源加载/日志/网络分别由 `LoadResource()`、`WriteLog()`、`SyncNetwork()` 承担
