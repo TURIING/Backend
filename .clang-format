@@ -23,6 +23,11 @@ AlignConsecutiveAssignments:                             # 对齐连续赋值
   AcrossEmptyLines: false                                # 不跨空行对齐
   AcrossComments: false                                  # 不跨注释对齐
 
+AlignConsecutiveMacros:                                  # 对齐连续宏定义
+  Enabled: true                                          # 启用
+  AcrossEmptyLines: false                                # 不跨空行对齐
+  AcrossComments: false                                  # 不跨注释对齐
+
 PointerAlignment: Left                                   # 指针星号靠左
 
 SortIncludes: true                                       # 启用 include 排序
