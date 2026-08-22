@@ -13,6 +13,12 @@ public:
     // 当前为占位实现，仅构造对象
     static DriverPtr Create(VulkanPlatform *platform, VulkanContext &context,
                             const DriverConfig &config);
+
+    Dispatcher GetDispatcher() const noexcept override;
+
+    // 方法名由 DriverAPI.inc 宏机制统一生成，保持原版拼写
+    void terminate() override;
+    FenceHandle createFenceS() noexcept override;
 };
 
 END_NS_BACKEND

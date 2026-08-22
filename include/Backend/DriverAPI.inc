@@ -65,15 +65,15 @@
     DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_TAGGED_R_N(R, N, ...) \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString&&, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString&&, tag))
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableString&&, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableString&&, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...) \
-    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableCString, tag = {}), \
-            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableCString, tag))
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableString, tag = {}), \
+            PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableString, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_0(R, N) \
     DECL_DRIVER_API_SYNCHRONOUS(R, N,,)
@@ -82,3 +82,21 @@
 #define ARG_1( T, P, ...) T P
 #define DECL_DRIVER_API_0(N)      DECL_DRIVER_API(N, ARG_1(int, dummy=0), PARAM_1(dummy))
 #define DECL_DRIVER_API_R_0(R, N) DECL_DRIVER_API_RETURN(R, N, ARG_1(int, dummy=0), PARAM_1(dummy))
+
+// 种子方法清单：原版 DriverAPI 的前 8 条，覆盖异步 / RETURN / 同步三条展开路径
+DECL_DRIVER_API_0(tick)
+
+DECL_DRIVER_API_N(beginFrame,
+        int64_t, monotonic_clock_ns,
+        int64_t, refreshIntervalNs,
+        uint32_t, frameId)
+
+DECL_DRIVER_API_0(flush)
+DECL_DRIVER_API_0(finish)
+DECL_DRIVER_API_0(resetState)
+
+DECL_DRIVER_API_TAGGED_R_N(FenceHandle, createFence)
+
+DECL_DRIVER_API_N(destroyFence, FenceHandle, fh)
+
+DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
