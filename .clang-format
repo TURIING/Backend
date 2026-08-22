@@ -4,6 +4,8 @@ Language: Cpp                                            # 仅对 C/C++ 文件�
 Standard: c++20                                          # 按 C++20 标准解析语法
 
 AccessModifierOffset: -4                                 # 访问修饰符缩进
+EmptyLineBeforeAccessModifier: Leave                      # 访问修饰符前空行：保留已有（不强制、不删除）
+EmptyLineAfterAccessModifier:  Leave                      # 访问修饰符后空行：保留已有（不强制、不删除）
 IndentWidth: 4                                           # 缩进宽度：4 空格
 TabWidth: 4                                              # tab 字符对应的宽度
 UseTab: Never                                            # 禁止使用 tab，统一用空格
