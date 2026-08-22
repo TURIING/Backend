@@ -4,3 +4,6 @@
 [submodule "3rd/volk"]
 	path = 3rd/volk
 	url = https://github.com/zeux/volk.git
+[submodule ".dsh"]
+	path = .dsh
+	url = git@github.com:TURIING/harness-dotfiles.git
