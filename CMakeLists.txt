@@ -18,7 +18,7 @@ enable_testing()
 add_subdirectory(tests)
 add_subdirectory(3rd)
 
-file(GLOB_RECURSE BACKEND_SOURCES src/*.cpp)
+file(GLOB_RECURSE BACKEND_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${BACKEND_NAME} STATIC ${BACKEND_SOURCES})
 target_include_directories(${BACKEND_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(${BACKEND_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/src)
