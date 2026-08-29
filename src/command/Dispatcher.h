@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Backend/DriverDefine.h"
+
 #include <cstdint>
 
 BEGIN_NS_BACKEND
@@ -15,7 +17,7 @@ public:
 #undef DECL_DRIVER_API_SYNCHRONOUS
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #undef DECL_DRIVER_API
-#define DECL_DRIVER_API(methodName, paramsDecl, params)     Execute methodName##_;
+#define DECL_DRIVER_API(methodName, paramsDecl, params) Execute methodName##_;
 #undef DECL_DRIVER_API_RETURN
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) Execute methodName##_;
 
