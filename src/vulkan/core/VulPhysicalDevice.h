@@ -17,7 +17,7 @@ class VulPhysicalDevice final : public VulObject<VkPhysicalDevice> {
 
 public:
     // 创建信息（Builder 模式）
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct VulPhysicalDevice::BuilderDetails;
 
     public:

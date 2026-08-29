@@ -16,7 +16,7 @@ class VulInstance final : public VulObject<VkInstance> {
 
 public:
     // 创建信息（Builder 模式）
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct VulInstance::BuilderDetails;
 
     public:

@@ -15,16 +15,16 @@ class VulQueue final : public VulObject<VkQueue> {
 
 public:
     // 创建信息（Builder 模式）
-    class Builder : public BuilderBase<BuilderDetails> {
+    class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
 
     public:
         Builder() noexcept;
         ~Builder() noexcept;
-        Builder &SetDevice(VulLogicDevicePtr device) noexcept;
-        Builder &SetQueueFamilyIndex(uint32_t index) noexcept;
-        Builder &SetQueueIndex(uint32_t index) noexcept;
-        Builder &SetProtected(bool enabled) noexcept;
+        Builder    &SetDevice(VulLogicDevicePtr device) noexcept;
+        Builder    &SetQueueFamilyIndex(uint32_t index) noexcept;
+        Builder    &SetQueueIndex(uint32_t index) noexcept;
+        Builder    &SetProtected(bool enabled) noexcept;
         VulQueuePtr Build();
     };
 
