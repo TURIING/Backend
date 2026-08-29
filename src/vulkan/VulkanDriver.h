@@ -2,8 +2,12 @@
 
 #include "Backend/Driver.h"
 #include "Backend/DriverDefine.h"
+
 #include "VulkanContext.h"
 
+#undef DECL_DRIVER_API
+#undef DECL_DRIVER_API_SYNCHRONOUS
+#undef DECL_DRIVER_API_RETURN
 BEGIN_NS_BACKEND
 
 class VulkanPlatform;
@@ -11,14 +15,20 @@ class VulkanPlatform;
 class VulkanDriver : public Driver {
 public:
     // 当前为占位实现，仅构造对象
-    static DriverPtr Create(VulkanPlatform *platform, VulkanContext &context,
-                            const DriverConfig &config);
+    static DriverPtr Create(VulkanPlatform *platform, VulkanContext &context, const DriverConfig &config);
 
     Dispatcher GetDispatcher() const noexcept override;
 
-    // 方法名由 DriverAPI.inc 宏机制统一生成，保持原版拼写
-    void terminate() override;
-    FenceHandle createFenceS() noexcept override;
+    template <typename T>
+    friend class ConcreteDispatcher;
+
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                      inline void methodName(paramsDecl);
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) RetType methodName(paramsDecl) override;
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
+    RetType     methodName##S() noexcept override;                      \
+    inline void methodName##R(RetType, paramsDecl);
+
+#include "Backend/DriverAPI.inc"
 };
 
 END_NS_BACKEND
