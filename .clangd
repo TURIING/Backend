@@ -12,6 +12,7 @@ Diagnostics:
       - bugprone*
     Remove:
       - modernize-use-trailing-return-type
+      - modernize-use-constraints
       - bugprone-easily-swappable-parameters
 
   Suppress:
