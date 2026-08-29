@@ -1,2 +1,18 @@
-// Backend 测试入口 — gtest_main 提供 main() 函数
-#include <gtest/gtest.h>
+#include "Utils/Log.h"
+
+#include "App.h"
+#include "Engine.h"
+
+using namespace backend_test;
+
+int main() {
+    utils::Log::Instance().Init();
+    auto setup = [](const EnginePtr& engine) {
+        engine->QueueCommand([] { LOG_INFO("probe: executed on driver thread"); });
+    };
+    auto clean = [](const EnginePtr&) { LOG_INFO("cleanup: before terminate"); };
+
+    App::Instance().Run(setup, clean);
+    utils::Log::Instance().Shutdown();
+    return 0;
+}
