@@ -31,6 +31,7 @@ class HandleBase {
 public:
     using HandleId                    = uint32_t;
     static constexpr HandleId kNullId = HandleId{ UINT32_MAX };
+
     constexpr HandleBase() noexcept : m_object(kNullId) {}
     explicit               operator bool() const noexcept { return m_object != kNullId; }
     void                   Clear() noexcept { m_object = kNullId; }
@@ -42,9 +43,7 @@ public:
 protected:
     HandleBase(HandleBase const& rhs) noexcept            = default;
     HandleBase& operator=(HandleBase const& rhs) noexcept = default;
-
     HandleBase(HandleBase&& rhs) noexcept : m_object(rhs.m_object) { rhs.m_object = kNullId; }
-
     HandleBase& operator=(HandleBase&& rhs) noexcept {
         if (this != &rhs) {
             m_object     = rhs.m_object;
@@ -59,8 +58,7 @@ private:
 
 template <typename T>
 struct Handle : public HandleBase {
-    Handle() noexcept = default;
-
+    Handle() noexcept                  = default;
     Handle(Handle const& rhs) noexcept = default;
     Handle(Handle&& rhs) noexcept      = default;
 
