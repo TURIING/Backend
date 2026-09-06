@@ -10,6 +10,7 @@
 BEGIN_NS_BACKEND
 
 class ResourceManager;
+class VulkanBuffer;
 
 enum class ResourceType : uint8_t {
     BufferObject        = 0,
@@ -80,5 +81,8 @@ private:
 
     friend class ResourceManager;
 };
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept;
 
 END_NS_BACKEND

@@ -79,8 +79,15 @@ private:
     D* construct(Handle<B> const& handle, ARGS&&... args) {
         D* obj = m_handleAllocator.Construct<D, B>(handle, std::forward<ARGS>(args)...);
         obj->template init<D>(handle.GetId(), this);
-        traceConstruction(GetTypeEnum<D>(), handle.GetId());
+        traceConstruction(obj->template GetTypeEnum<D>(), handle.GetId());
         return obj;
+    }
+
+    // 延迟销毁路径：析构对象（触发资源归还回调）并归还 HandleAllocator 池块
+    template <typename D, typename B>
+    void destruct(Handle<B> handle) {
+        D* obj = m_handleAllocator.HandleCast<D*>(handle);
+        m_handleAllocator.Deallocate(handle, obj);
     }
 
     void destructLaterWithType(ResourceType type, HandleBase::HandleId id);

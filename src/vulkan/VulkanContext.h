@@ -77,6 +77,8 @@ public:
 
     inline bool IsPipelineCreationFeedbackSupported() const noexcept { return m_pipelineCreationFeedbackSupported; }
 
+    inline bool IsStagingBufferBypassEnabled() const noexcept { return m_stagingBufferBypassEnabled; }
+
 private:
     VkPhysicalDeviceMemoryProperties m_memoryProperties         = {};
     VkPhysicalDeviceProperties2      m_physicalDeviceProperties = {

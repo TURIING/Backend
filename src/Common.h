@@ -1,6 +1,9 @@
 #pragma once
+#include "Backend/DriverDefine.h"
+
+#include "Utils/Utils.h"
+
+#include <bitset>
 #include <unordered_set>
 
-#include "Backend/DriverDefine.h"
 #include "Macro.h"
-#include "Utils/Utils.h"

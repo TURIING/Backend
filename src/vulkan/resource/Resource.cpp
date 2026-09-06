@@ -1,8 +1,8 @@
 #include "vulkan/resource/Resource.h"
 
-#include "Utils/Macro.h"
-
 #include "vulkan/resource/ResourceManager.h"
+
+#include "Utils/Macro.h"
 
 BEGIN_NS_BACKEND
 
@@ -40,5 +40,10 @@ void Resource::OnLastRef() {
     // 对象必须经 ResourceManager 创建（m_resManager 非空）；引用归零不立即销毁，
     // 转交其延迟回收，避免在任意线程析构
     m_resManager->destructLaterWithType(m_type, m_id);
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept {
+    return ResourceType::VulkanBuffer;
 }
 END_NS_BACKEND

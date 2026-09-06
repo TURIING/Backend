@@ -1,8 +1,9 @@
 #include "vulkan/resource/ResourceManager.h"
 
-#include <utility>
-
 #include "vulkan/VkDef.h"
+#include "vulkan/buffer/VulkanBuffer.h"
+
+#include <utility>
 
 BEGIN_NS_BACKEND
 
@@ -38,9 +39,11 @@ void ResourceManager::Terminate() noexcept {
     }
 }
 
-void ResourceManager::destroyWithType(ResourceType type, [[maybe_unused]] HandleBase::HandleId id) {
-    // 具体类型分支由 VulkanHandles 移植补齐
+void ResourceManager::destroyWithType(ResourceType type, HandleBase::HandleId id) {
     switch (type) {
+        case ResourceType::VulkanBuffer:
+            destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
+            break;
         default:
             break;
     }
