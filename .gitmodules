@@ -7,3 +7,6 @@
 [submodule ".dsh"]
 	path = .dsh
 	url = git@github.com:TURIING/harness-dotfiles.git
+[submodule "3rd/VulkanMemoryAllocator"]
+	path = 3rd/VulkanMemoryAllocator
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
