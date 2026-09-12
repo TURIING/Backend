@@ -13,12 +13,13 @@ ContinuationIndentWidth: 4                               # 续行缩进宽度：
 SpacesInContainerLiterals: true
 Cpp11BracedListStyle: false
 
-ColumnLimit: 120                                         # 单行最大 120 列
+ColumnLimit: 150                                         # 单行最大 150 列
 
 AlignConsecutiveDeclarations:                            # 对齐连续声明
   Enabled: true                                          # 启用
   AcrossEmptyLines: false                                # 不跨空行对齐
   AcrossComments: false                                  # 不跨注释对齐
+  AlignFunctionDeclarations: false                       # 不对齐函数名，只对齐变量/成员/宏（该键 LLVM 20 起才有，17 上会导致配置加载失败）
 
 AlignConsecutiveAssignments:                             # 对齐连续赋值
   Enabled: true                                          # 启用
@@ -31,6 +32,7 @@ AlignConsecutiveMacros:                                  # 对齐连续宏定义
   AcrossComments: false                                  # 不跨注释对齐
 
 PointerAlignment: Left                                   # 指针星号靠左
+DerivePointerAlignment: true                             # 按文件推导指针风格：LLVM 21 起 C++ 不再默认推导，显式开启以保持现状
 
 SortIncludes: true                                       # 启用 include 排序
 IncludeBlocks: Regroup                                   # 按分类重排 include 块
