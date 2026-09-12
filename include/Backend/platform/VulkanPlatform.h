@@ -41,6 +41,11 @@ public:
     DriverPtr            CreateDriver(const DriverConfig &config, void *shareContext) override;
     virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
 
+    // 供 driver 创建 VMA allocator 等需要原生句柄的场景使用
+    NODISCARD VkInstance GetVkInstance() const noexcept;
+    NODISCARD VkPhysicalDevice GetVkPhysicalDevice() const noexcept;
+    NODISCARD VkDevice GetVkDevice() const noexcept;
+
     /**
      * @brief 返回始终需要启用的实例扩展（默认无）
      */

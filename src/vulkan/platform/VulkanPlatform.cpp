@@ -235,6 +235,12 @@ struct VulkanPlatformPrivate {
 VulkanPlatform::VulkanPlatform() noexcept  = default;
 VulkanPlatform::~VulkanPlatform() noexcept = default;
 
+VkInstance VulkanPlatform::GetVkInstance() const noexcept { return m_pImpl->m_pInstance->GetHandle(); }
+
+VkPhysicalDevice VulkanPlatform::GetVkPhysicalDevice() const noexcept { return m_pImpl->m_pPhysicalDevice->GetHandle(); }
+
+VkDevice VulkanPlatform::GetVkDevice() const noexcept { return m_pImpl->m_pDevice->GetHandle(); }
+
 DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareContext) {
     initRuntime(shareContext);
 
@@ -249,7 +255,7 @@ DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareCo
     printDepthFormats(m_pImpl->m_pPhysicalDevice);
 #endif
 
-    return VulkanDriver::Create(this, *m_pImpl->m_pContext, config);
+    return VulkanDriver::Create(this, m_pImpl->m_pContext, config);
 }
 
 void VulkanPlatform::initRuntime(void *shareContext) {
