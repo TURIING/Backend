@@ -2,6 +2,10 @@
 
 #include "Backend/Driver.h"
 #include "Backend/DriverDefine.h"
+#include "Backend/platform/Platform.h"
+#include "Backend/platform/VulkanPlatform.h"
+
+#include "Utils/Utils.h"
 
 #include "VulkanContext.h"
 
@@ -10,7 +14,8 @@
 #undef DECL_DRIVER_API_RETURN
 BEGIN_NS_BACKEND
 
-class VulkanPlatform;
+DECLARE_CLASS_AND_SHARE_PTR(VulkanPlatform);
+DECLARE_CLASS_AND_SHARE_PTR(VulkanContext);
 
 class VulkanDriver : public Driver {
 public:

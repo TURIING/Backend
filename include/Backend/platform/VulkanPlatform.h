@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Backend/DriverDefine.h"
+
 #include <string>
 
-#include "Backend/DriverDefine.h"
 #include "Common.h"
 #include "Platform.h"
 
@@ -62,15 +63,15 @@ public:
     ExtensionSet getInstanceExtensions(ExtensionSet const &externallyRequiredExts = {});
 
 private:
-    void initRuntime(void *shareContext);
+    void         initRuntime(void *shareContext);
     ExtensionSet initInstance();
-    void selectPhysicalDevice(void *shareContext);
+    void         selectPhysicalDevice(void *shareContext);
     ExtensionSet initDeviceExtensions(DriverConfig const &config, ExtensionSet &instExts);
-    void createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
-    void initQueues();
-    void queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
-                                   ExtensionSet const &instExts, ExtensionSet const &deviceExts,
-                                   void *sharedContext) noexcept;
+    void         createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
+    void         initQueues();
+    void         queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
+                                           void *sharedContext) noexcept;
 };
+DECLARE_SHARE_PTR_CLASS(VulkanPlatform);
 
 END_NS_BACKEND

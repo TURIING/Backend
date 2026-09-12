@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional>
+
 #include "DriverDefine.h"
 #include "Handle.h"
-
-#include <functional>
 
 BEGIN_NS_BACKEND
 
@@ -25,13 +25,12 @@ public:
     void methodName(paramsDecl) {}
 
 #undef DECL_DRIVER_API_SYNCHRONOUS
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) \
-    virtual RetType methodName(paramsDecl) = 0;
+#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) virtual RetType methodName(paramsDecl) = 0;
 
 #undef DECL_DRIVER_API_RETURN
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    virtual RetType methodName##S() noexcept = 0; \
-    void methodName##R(RetType, paramsDecl) {}
+    virtual RetType methodName##S() noexcept = 0;                       \
+    void            methodName##R(RetType, paramsDecl) {}
 
 #include "Backend/DriverAPI.inc"
 };

@@ -30,8 +30,7 @@
 #define APPLY12(M, A, ...)                                                            EXPAND(M(A)), EXPAND(APPLY11(M, __VA_ARGS__))
 #define APPLY13(M, A, ...)                                                            EXPAND(M(A)), EXPAND(APPLY12(M, __VA_ARGS__))
 #define APPLY_N__(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, X, ...) APPLY##X
-#define APPLY(M, ...) \
-    EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
+#define APPLY(M, ...)                                                                 EXPAND(EXPAND(APPLY_N__(M, __VA_ARGS__, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))(M, __VA_ARGS__))
 
 #define PAIR_ARGS_0(M, ...)
 #define PAIR_ARGS_1(M, X, Y, ...)  M(X, Y)
@@ -48,13 +47,12 @@
 #define PAIR_ARGS_12(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_11(M, __VA_ARGS__))
 #define PAIR_ARGS_13(M, X, Y, ...) M(X, Y), EXPAND(PAIR_ARGS_12(M, __VA_ARGS__))
 
-#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, \
-                      E12, _12, E13, _13, X, ...)                                                                     \
+#define PAIR_ARGS_N__(_0, E1, _1, E2, _2, E3, _3, E4, _4, E5, _5, E6, _6, E7, _7, E8, _8, E9, _9, E10, _10, E11, _11, E12, _12, E13, _13, X, ...) \
     PAIR_ARGS_##X
 
-#define PAIR_ARGS_N(M, ...)                                                                                          \
-    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 13, E, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, \
-                                E, 2, E, 1, E, 0))(M, __VA_ARGS__))
+#define PAIR_ARGS_N(M, ...)                                                                                                              \
+    EXPAND(EXPAND(PAIR_ARGS_N__(0, ##__VA_ARGS__, 13, E, 12, E, 11, E, 10, E, 9, E, 8, E, 7, E, 6, E, 5, E, 4, E, 3, E, 2, E, 1, E, 0))( \
+        M, __VA_ARGS__))
 
 #define ARG(T, P) T P
 
@@ -62,19 +60,17 @@
 
 #define DECL_DRIVER_API_N(N, ...) DECL_DRIVER_API(N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
-#define DECL_DRIVER_API_R_N(R, N, ...) \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
+#define DECL_DRIVER_API_R_N(R, N, ...) DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
-#define DECL_DRIVER_API_TAGGED_R_N(R, N, ...)                                                         \
-    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableString&&, tag = {}), \
-                           PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableString&&, tag))
+#define DECL_DRIVER_API_TAGGED_R_N(R, N, ...)                                                            \
+    DECL_DRIVER_API_RETURN(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, NS_UTILS::ImmutableString&&, tag = {}), \
+                           PAIR_ARGS_N(PARAM, ##__VA_ARGS__, NS_UTILS::ImmutableString&&, tag))
 
-#define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) \
-    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
+#define DECL_DRIVER_API_SYNCHRONOUS_N(R, N, ...) DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__), PAIR_ARGS_N(PARAM, ##__VA_ARGS__))
 
-#define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...)                                                  \
-    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, utils::ImmutableString, tag = {}), \
-                                PAIR_ARGS_N(PARAM, ##__VA_ARGS__, utils::ImmutableString, tag))
+#define DECL_DRIVER_API_SYNCHRONOUS_TAGGED_N(R, N, ...)                                                     \
+    DECL_DRIVER_API_SYNCHRONOUS(R, N, PAIR_ARGS_N(ARG, ##__VA_ARGS__, NS_UTILS::ImmutableString, tag = {}), \
+                                PAIR_ARGS_N(PARAM, ##__VA_ARGS__, NS_UTILS::ImmutableString, tag))
 
 #define DECL_DRIVER_API_SYNCHRONOUS_0(R, N) DECL_DRIVER_API_SYNCHRONOUS(R, N, , )
 
