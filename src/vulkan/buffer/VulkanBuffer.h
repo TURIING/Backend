@@ -45,5 +45,6 @@ private:
     VulkanGpuBuffer const* m_gpuBuffer;
     OnRecycle              m_onRecycleFn;
 };
+DECLARE_SHARE_PTR_CLASS(VulkanBuffer);
 
 END_NS_BACKEND

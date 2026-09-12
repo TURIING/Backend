@@ -9,6 +9,16 @@ BEGIN_NS_BACKEND
 
 namespace {
 
+// 应用层用途到 buffer 域池类型的映射：两类缓冲对象共用池，各自用途决定 VkBuffer usage
+VulkanBufferBinding GetBufferObjectBinding(BufferObjectBinding bindingType) noexcept {
+    switch (bindingType) {
+        CASE_FROM_TO(BufferObjectBinding::Vertex, VulkanBufferBinding::Vertex);
+        CASE_FROM_TO(BufferObjectBinding::Uniform, VulkanBufferBinding::Uniform);
+        CASE_FROM_TO(BufferObjectBinding::ShaderStorage, VulkanBufferBinding::ShaderStorage);
+    }
+    return VulkanBufferBinding::Unknown;
+}
+
 VkFormat GetVkFormat(ElementType type, bool normalized, bool integer) noexcept {
     if (normalized) {
         switch (type) {
@@ -104,5 +114,13 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attr
         m_attributes.set(attribIndex);
     }
 }
+
+VulkanBufferObject::VulkanBufferObject(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache,
+                                       uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
+    : HwBufferObject(byteCount, false),
+      bindingType(bindingType),
+      m_buffer(context, allocator, bufferCache, GetBufferObjectBinding(bindingType), usage, byteCount) {}
+
+void VulkanBufferObject::LoadFromCpu(VulkanCommandBuffer& commands, void const* cpuData, uint32_t byteOffset, uint32_t numBytes) {}
 
 END_NS_BACKEND

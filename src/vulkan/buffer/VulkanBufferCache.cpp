@@ -28,11 +28,11 @@ VkBufferUsageFlags getVkBufferUsage(VulkanBufferBinding usage) {
 
 }  // namespace
 
-VulkanBufferCache::VulkanBufferCache(VulkanContext const& context, ResourceManager& resourceManager,
+VulkanBufferCache::VulkanBufferCache(const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager,
                                      VmaAllocator allocator)
     : m_context(context), m_resourceManager(resourceManager), m_allocator(allocator) {}
 
-NS_UTILS::SharedPtr<VulkanBuffer> VulkanBufferCache::Acquire(VulkanBufferBinding binding, uint32_t numBytes) noexcept {
+VulkanBufferPtr VulkanBufferCache::Acquire(VulkanBufferBinding binding, uint32_t numBytes) noexcept {
     LOG_ASSERT(binding != VulkanBufferBinding::Unknown);
 
     BufferPool& bufferPool = GetPool(binding);
@@ -42,12 +42,12 @@ NS_UTILS::SharedPtr<VulkanBuffer> VulkanBufferCache::Acquire(VulkanBufferBinding
     if (iter != bufferPool.end()) {
         VulkanGpuBuffer const* gpuBuffer = iter->second.gpuBuffer;
         bufferPool.erase(iter);
-        return m_resourceManager.AllocateAndConstruct<VulkanBuffer>(
+        return m_resourceManager->AllocateAndConstruct<VulkanBuffer>(
             gpuBuffer, [this](VulkanGpuBuffer const* gpuBuffer) { this->Release(gpuBuffer); });
     }
 
     VulkanGpuBuffer const* gpuBuffer = Allocate(binding, numBytes);
-    return m_resourceManager.AllocateAndConstruct<VulkanBuffer>(
+    return m_resourceManager->AllocateAndConstruct<VulkanBuffer>(
         gpuBuffer, [this](VulkanGpuBuffer const* gpuBuffer) { this->Release(gpuBuffer); });
 }
 
@@ -102,7 +102,7 @@ VulkanGpuBuffer const* VulkanBufferCache::Allocate(VulkanBufferBinding binding, 
 
     VmaAllocationCreateFlags vmaFlags = 0;
     // UMA 下缓冲恒可映射，标记 HOST_ACCESS 使 pMappedData 有效
-    if (m_context.IsUnifiedMemoryArchitecture()) {
+    if (m_context->IsUnifiedMemoryArchitecture()) {
         vmaFlags |= VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
 

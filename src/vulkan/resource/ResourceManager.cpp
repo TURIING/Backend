@@ -3,6 +3,7 @@
 #include "vulkan/VkDef.h"
 #include "vulkan/VulkanHandle.h"
 #include "vulkan/buffer/VulkanBuffer.h"
+#include "vulkan/stage/VulkanStageBuffer.h"
 
 #include <utility>
 
@@ -47,6 +48,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleBase::HandleId id
             break;
         case ResourceType::VertexBufferInfo:
             destruct<VulkanVertexBufferInfo>(Handle<VulkanVertexBufferInfo>(id));
+            break;
+        case ResourceType::StageSegment:
+            destruct<VulkanStageBuffer::Segment>(Handle<VulkanStageBuffer::Segment>(id));
             break;
         default:
             break;

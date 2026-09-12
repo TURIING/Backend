@@ -12,6 +12,7 @@ BEGIN_NS_BACKEND
 class ResourceManager;
 class VulkanBuffer;
 struct VulkanVertexBufferInfo;
+struct VulkanVertexBuffer;
 
 enum class ResourceType : uint8_t {
     BufferObject        = 0,
@@ -88,5 +89,8 @@ ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept;
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept;
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanVertexBuffer>() noexcept;
 
 END_NS_BACKEND

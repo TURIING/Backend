@@ -55,7 +55,8 @@ public:
     // driver 销毁入口：防重复销毁，置标记后释放引用
     template <typename D>
     void Destroy(NS_UTILS::SharedPtr<D>& ptr) {
-        if (ptr == nullptr) {
+        // 用 operator bool 判空：SharedPtr 无 operator==，比较 nullptr 会经 Ref/Resource 转换产生二义
+        if (!ptr) {
             LOG_CRITICAL("Destroy called with null handle");
         }
         D* obj = ptr.Get();
