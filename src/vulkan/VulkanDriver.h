@@ -16,10 +16,11 @@ BEGIN_NS_BACKEND
 
 DECLARE_CLASS_AND_SHARE_PTR(VulkanPlatform);
 DECLARE_CLASS_AND_SHARE_PTR(VulkanContext);
+DECLARE_CLASS_AND_SHARE_PTR(ResourceManager);
 
 class VulkanDriver : public Driver {
 public:
-    // 当前为占位实现，仅构造对象
+    VulkanDriver(const VulkanPlatformPtr &platform, const VulkanContextPtr &context, const DriverConfig &config);
     static DriverPtr Create(VulkanPlatform *platform, VulkanContext &context, const DriverConfig &config);
 
     Dispatcher GetDispatcher() const noexcept override;
@@ -34,6 +35,9 @@ public:
     inline void methodName##R(RetType, paramsDecl);
 
 #include "Backend/DriverAPI.inc"
+
+private:
+    ResourceManagerPtr m_resMgr;
 };
 
 END_NS_BACKEND

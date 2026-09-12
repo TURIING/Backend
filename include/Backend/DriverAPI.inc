@@ -88,6 +88,8 @@ DECL_DRIVER_API_0(flush)
 DECL_DRIVER_API_0(finish)
 DECL_DRIVER_API_0(resetState)
 
+DECL_DRIVER_API_TAGGED_R_N(VertexBufferInfoHandle, CreateVertexBufferInfo, uint8_t, bufferCount, uint8_t, attributeCount, AttributeArray, attributes)
+
 DECL_DRIVER_API_TAGGED_R_N(FenceHandle, createFence)
 
 DECL_DRIVER_API_N(destroyFence, FenceHandle, fh)

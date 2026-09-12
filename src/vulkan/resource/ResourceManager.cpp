@@ -1,6 +1,7 @@
 #include "vulkan/resource/ResourceManager.h"
 
 #include "vulkan/VkDef.h"
+#include "vulkan/VulkanHandle.h"
 #include "vulkan/buffer/VulkanBuffer.h"
 
 #include <utility>
@@ -43,6 +44,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleBase::HandleId id
     switch (type) {
         case ResourceType::VulkanBuffer:
             destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
+            break;
+        case ResourceType::VertexBufferInfo:
+            destruct<VulkanVertexBufferInfo>(Handle<VulkanVertexBufferInfo>(id));
             break;
         default:
             break;

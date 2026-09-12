@@ -18,7 +18,7 @@
 BEGIN_NS_BACKEND
 DECLARE_CLASS_AND_SHARE_PTR(ResourceManager);
 
-class ResourceManager {
+class ResourceManager : public NS_UTILS::Ref {
 public:
     ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck, bool disablePoolHandleTags);
 

@@ -46,4 +46,9 @@ template <>
 ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept {
     return ResourceType::VulkanBuffer;
 }
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept {
+    return ResourceType::VertexBufferInfo;
+}
 END_NS_BACKEND

@@ -3,6 +3,7 @@
 #include "Utils/Utils.h"
 
 #include <array>
+#include <cstddef>
 
 // 启用 Vulkan beta 扩展（VK_KHR_portability_subset 等，MoltenVK 需要）
 #define VK_ENABLE_BETA_EXTENSIONS
@@ -83,9 +84,10 @@ struct DriverConfig {
     StereoscopicType   stereoscopicType   = StereoscopicType::NONE;
     GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
 
-    bool vulkanEnableAsyncPipelineCachePrewarming = false;
-    bool disableParallelShaderCompile             = false;
-    bool vulkanEnableStagingBufferBypass          = false;
+    bool        vulkanEnableAsyncPipelineCachePrewarming = false;
+    bool        disableParallelShaderCompile             = false;
+    bool        vulkanEnableStagingBufferBypass          = false;
+    std::size_t handleArenaSize                          = 0;
 };
 
 struct Attribute {
