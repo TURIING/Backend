@@ -90,6 +90,14 @@ DECL_DRIVER_API_0(resetState)
 
 DECL_DRIVER_API_TAGGED_R_N(VertexBufferInfoHandle, CreateVertexBufferInfo, uint8_t, bufferCount, uint8_t, attributeCount, AttributeArray, attributes)
 
+DECL_DRIVER_API_TAGGED_R_N(VertexBufferHandle, CreateVertexBuffer, uint32_t, vertexCount, VertexBufferInfoHandle, vbInfoHandle)
+
+DECL_DRIVER_API_TAGGED_R_N(BufferObjectHandle, CreateBufferObject, uint32_t, byteCount, BufferObjectBinding, bindingType, BufferUsage, usage)
+
+DECL_DRIVER_API_N(DestroyBufferObject, BufferObjectHandle, boh)
+
+DECL_DRIVER_API_N(SetVertexBufferObject, VertexBufferHandle, vbh, uint32_t, index, BufferObjectHandle, boh)
+
 DECL_DRIVER_API_TAGGED_R_N(FenceHandle, createFence)
 
 DECL_DRIVER_API_N(destroyFence, FenceHandle, fh)

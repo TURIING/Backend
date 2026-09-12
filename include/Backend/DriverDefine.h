@@ -18,6 +18,7 @@
 BEGIN_NS_BACKEND
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16;
+static constexpr size_t MAX_VERTEX_BUFFER_COUNT    = 16;
 
 enum class BackendType { AUTO, OPENGL, VULKAN };
 
@@ -49,6 +50,15 @@ enum class BufferUsage : uint8_t {
     DYNAMIC          = 1,     //!< 内容频繁修改、使用多次
     DYNAMIC_BIT      = 0x1,   //!< 可频繁修改（位标志）
     SHARED_WRITE_BIT = 0x04,  //!< 可内存映射写（位标志）
+};
+
+/**
+ * 缓冲对象在渲染管线中的绑定点
+ */
+enum class BufferObjectBinding : uint8_t {
+    Vertex,
+    Uniform,
+    ShaderStorage,
 };
 
 enum class ElementType : uint8_t {
