@@ -35,7 +35,7 @@ public:
     constexpr HandleBase() noexcept : m_object(kNullId) {}
     explicit               operator bool() const noexcept { return m_object != kNullId; }
     void                   Clear() noexcept { m_object = kNullId; }
-    [[nodiscard]] HandleId GetId() const noexcept { return m_object; }
+    NODISCARD HandleId GetId() const noexcept { return m_object; }
 
     // 内部使用：以 nullid 构造说明未初始化句柄被使用
     explicit HandleBase(HandleId id) noexcept : m_object(id) { LOG_ASSERT(m_object != kNullId); }

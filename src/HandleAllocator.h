@@ -170,9 +170,9 @@ private:
         static constexpr size_t GetAlignment() noexcept { return MIN_ALIGNMENT; }
 
         // 基类 2 参纯虚交集；3 参路径由 Arena 直调
-        [[nodiscard]] void* Alloc(size_t size, size_t alignment) noexcept override { return Alloc(size, alignment, 0); }
+        NODISCARD void* Alloc(size_t size, size_t alignment) noexcept override { return Alloc(size, alignment, 0); }
 
-        [[nodiscard]] void* Alloc(size_t size, size_t alignment, size_t extra) noexcept {
+        NODISCARD void* Alloc(size_t size, size_t alignment, size_t extra) noexcept {
             utils::AllocatorPolicyBase* const pool = selectPool(size);
             return pool ? pool->Alloc(size, alignment) : nullptr;
         }

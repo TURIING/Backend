@@ -39,7 +39,7 @@ public:
         }
     }
 
-    [[nodiscard]] VulkanGpuBuffer const* GetGpuBuffer() const { return m_gpuBuffer; }
+    NODISCARD VulkanGpuBuffer const* GetGpuBuffer() const { return m_gpuBuffer; }
 
 private:
     VulkanGpuBuffer const* m_gpuBuffer;

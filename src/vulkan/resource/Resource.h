@@ -11,6 +11,7 @@ BEGIN_NS_BACKEND
 
 class ResourceManager;
 class VulkanBuffer;
+struct VulkanVertexBufferInfo;
 
 enum class ResourceType : uint8_t {
     BufferObject        = 0,
@@ -43,16 +44,16 @@ enum class ResourceType : uint8_t {
 std::string_view TransResourceTypeToStr(ResourceType type);
 
 struct Resource : public NS_UTILS::Ref {
-    Resource()
-        : m_resManager(nullptr), m_id(HandleBase::kNullId), m_type(ResourceType::UndefinedType), m_destroyed(false) {}
+    Resource() : m_resManager(nullptr), m_id(HandleBase::kNullId), m_type(ResourceType::UndefinedType), m_destroyed(false) {}
 
     template <typename D>
-    [[nodiscard]] bool IsType() const {
+    NODISCARD bool IsType() const {
         return GetTypeEnum<D>() == m_type;
     }
 
-    [[nodiscard]] HandleBase::HandleId GetId() const { return m_id; }
-    [[nodiscard]] ResourceType         GetResourceType() const { return m_type; }
+    NODISCARD HandleBase::HandleId GetId() const { return m_id; }
+    NODISCARD ResourceType GetResourceType() const { return m_type; }
+
 
 protected:
     void OnLastRef() override;
@@ -65,8 +66,8 @@ private:
         m_type       = GetTypeEnum<D>();
     }
 
-    void               setDestroyed() { m_destroyed = true; }
-    [[nodiscard]] bool isDestroyed() const { return m_destroyed; }
+    void setDestroyed() { m_destroyed = true; }
+    NODISCARD bool isDestroyed() const { return m_destroyed; }
 
     // 具体类型的特化由 VulkanHandles 移植补齐
     template <typename D>
@@ -84,5 +85,8 @@ private:
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept;
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept;
 
 END_NS_BACKEND

@@ -3,6 +3,7 @@
 #include "Backend/Handle.h"
 
 #include "Utils/Log.h"
+#include "Utils/Utils.h"
 #include "Utils/mem/SharedPtr.h"
 #include "Utils/string/ImmutableString.h"
 
@@ -15,38 +16,38 @@
 #include "vulkan/resource/Resource.h"
 
 BEGIN_NS_BACKEND
+DECLARE_CLASS_AND_SHARE_PTR(ResourceManager);
 
 class ResourceManager {
 public:
     ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck, bool disablePoolHandleTags);
 
     template <typename D>
-    [[nodiscard]] Handle<D> AllocHandle() {
+    NODISCARD Handle<D> AllocHandle() {
         return m_handleAllocator.Allocate<D>();
     }
 
     // 前置条件：handle 已由 AllocHandle 分配
     template <typename D, typename B, typename... ARGS>
-    [[nodiscard]] NS_UTILS::SharedPtr<D> Make(Handle<B> const& handle, ARGS&&... args) {
+    NODISCARD NS_UTILS::SharedPtr<D> Make(Handle<B> const& handle, ARGS&&... args) {
         D* obj = construct<D, B>(handle, std::forward<ARGS>(args)...);
         return NS_UTILS::SharedPtr<D>(obj);
     }
 
     template <typename D, typename... ARGS>
-    [[nodiscard]] NS_UTILS::SharedPtr<D> AllocateAndConstruct(ARGS&&... args) {
+    NODISCARD NS_UTILS::SharedPtr<D> AllocateAndConstruct(ARGS&&... args) {
         return Make<D, D>(AllocHandle<D>(), std::forward<ARGS>(args)...);
     }
 
     // handle → 对象唯一转换通道，已销毁句柄在此拦截
     template <typename D, typename B>
-    [[nodiscard]] NS_UTILS::SharedPtr<D> Acquire(Handle<B> const& handle) {
+    NODISCARD NS_UTILS::SharedPtr<D> Acquire(Handle<B> const& handle) {
         D* obj = m_handleAllocator.HandleCast<D*, B>(handle);
         if (obj == nullptr) {
             LOG_CRITICAL("Handle id={} is invalid or of wrong type", handle.GetId());
         }
         if (obj->isDestroyed()) {
-            LOG_CRITICAL("Handle id={} ({}) is being used after it has been freed", obj->GetId(),
-                         TransResourceTypeToStr(obj->GetResourceType()));
+            LOG_CRITICAL("Handle id={} ({}) is being used after it has been freed", obj->GetId(), TransResourceTypeToStr(obj->GetResourceType()));
         }
         return NS_UTILS::SharedPtr<D>(obj);
     }
@@ -59,8 +60,7 @@ public:
         }
         D* obj = ptr.Get();
         if (obj->isDestroyed()) {
-            LOG_CRITICAL("Resource {} id={} is destroyed twice", TransResourceTypeToStr(obj->GetResourceType()),
-                         obj->GetId());
+            LOG_CRITICAL("Resource {} id={} is destroyed twice", TransResourceTypeToStr(obj->GetResourceType()), obj->GetId());
         }
         obj->setDestroyed();
         ptr.Reset();
