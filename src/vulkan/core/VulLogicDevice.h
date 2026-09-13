@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <unordered_set>
 
 #include "../VkDef.h"
@@ -17,11 +18,14 @@ class VulLogicDevice final : public VulObject<VkDevice> {
     struct BuilderDetails;
 
 public:
+    // 实际的 vkCreateDevice 由平台注入，使平台子类可覆写设备创建而不必重写初始化流程
+    using DeviceCreator = std::function<VkDevice(VkDeviceCreateInfo const &)>;
+
     // 创建设备时应请求的额外特性
     struct MiscDeviceFeatures {
         bool dynamicRendering        = false; // 允许创建无 render pass 的 VkGraphicsPipeline
         bool imageView2Don3DImage    = false; // 允许从 3D VkImage 创建 2D image view
-        GpuContextPriority gpuContextPriority = GpuContextPriority::DEFAULT;
+        GpuContextPriority gpuContextPriority = GpuContextPriority::Default;
     };
 
     // 创建信息（Builder 模式）
@@ -37,6 +41,7 @@ public:
         Builder &SetVulkan11Features(VkPhysicalDeviceVulkan11Features const &features) noexcept;
         Builder &SetProtectedQueue(bool enabled) noexcept;
         Builder &SetRequestedFeatures(MiscDeviceFeatures const &features) noexcept;
+        Builder &SetDeviceCreator(DeviceCreator creator) noexcept;
         VulLogicDevicePtr Build();
     };
 

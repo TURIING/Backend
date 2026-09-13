@@ -11,15 +11,15 @@ namespace {
 
 VkQueueGlobalPriorityKHR GetVkQueueGlobalPriority(GpuContextPriority priority) {
     switch (priority) {
-        case GpuContextPriority::LOW:
+        case GpuContextPriority::Low:
             return VK_QUEUE_GLOBAL_PRIORITY_LOW_KHR;
-        case GpuContextPriority::MEDIUM:
+        case GpuContextPriority::Medium:
             return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
-        case GpuContextPriority::HIGH:
+        case GpuContextPriority::High:
             return VK_QUEUE_GLOBAL_PRIORITY_HIGH_KHR;
-        case GpuContextPriority::REALTIME:
+        case GpuContextPriority::Realtime:
             return VK_QUEUE_GLOBAL_PRIORITY_REALTIME_KHR;
-        case GpuContextPriority::DEFAULT:
+        case GpuContextPriority::Default:
             return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
     }
     return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
@@ -35,6 +35,7 @@ struct VulLogicDevice::BuilderDetails {
     VkPhysicalDeviceVulkan11Features m_vk11Features = {};
     bool m_protectedQueue = false;
     MiscDeviceFeatures m_requestedFeatures;
+    DeviceCreator      m_deviceCreator;
 };
 
 VulLogicDevice::Builder::Builder() noexcept = default;
@@ -94,6 +95,11 @@ VulLogicDevice::Builder &VulLogicDevice::Builder::SetRequestedFeatures(
     return *this;
 }
 
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetDeviceCreator(DeviceCreator creator) noexcept {
+    m_pImpl->m_deviceCreator = std::move(creator);
+    return *this;
+}
+
 VulLogicDevicePtr VulLogicDevice::Builder::Build() {
     // 识别并选择所需队列
     uint32_t graphicsQueueFamilyIndex = VK_UTILS::IdentifyGraphicsQueueFamilyIndex(
@@ -122,7 +128,7 @@ VulLogicDevicePtr VulLogicDevice::Builder::Build() {
     }
 
     bool const requiresGpuPriority =
-        m_pImpl->m_requestedFeatures.gpuContextPriority != GpuContextPriority::DEFAULT;
+        m_pImpl->m_requestedFeatures.gpuContextPriority != GpuContextPriority::Default;
     VkDeviceQueueGlobalPriorityCreateInfoKHR queuePriorityCreateInfo = {
         .sType          = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR,
         .globalPriority = GetVkQueueGlobalPriority(m_pImpl->m_requestedFeatures.gpuContextPriority),
@@ -213,11 +219,11 @@ VulLogicDevicePtr VulLogicDevice::Builder::Build() {
         VK_UTILS::chainStruct(&deviceCreateInfo, &globalPriority);
     }
 
-    VkDevice device = VK_NULL_HANDLE;
-    VkResult result = vkCreateDevice(m_pImpl->m_physicalDevice->GetHandle(), &deviceCreateInfo, nullptr, &device);
-    if (result != VK_SUCCESS) {
-        LOG_CRITICAL("vkCreateDevice error={}", static_cast<int32_t>(result));
+    // 创建动作由平台注入，设备的错误处理与兜底也由平台负责
+    if (!m_pImpl->m_deviceCreator) {
+        LOG_CRITICAL("Vulkan device creator is not set");
     }
+    VkDevice device = m_pImpl->m_deviceCreator(deviceCreateInfo);
 
     return VulLogicDevicePtr(new VulLogicDevice(device, /*shared=*/false,
         graphicsQueueFamilyIndex, graphicsQueueIndex,

@@ -1,14 +1,17 @@
 #include "Backend/platform/VulkanPlatform.h"
 
 #include <cstring>
+#include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "../VkDef.h"
 #include "../VkUtils.h"
 #include "../VulkanContext.h"
 #include "../VulkanDriver.h"
+#include "VulkanPlatformSwapChainImpl.h"
 #include "vulkan/core/VulInstance.h"
 #include "vulkan/core/VulLogicDevice.h"
 #include "vulkan/core/VulPhysicalDevice.h"
@@ -149,7 +152,7 @@ std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VulPhysicalDevicePtr cons
     }
 #endif
 
-    if (driverConfig.stereoscopicType != StereoscopicType::MULTIVIEW) {
+    if (driverConfig.stereoscopicType != StereoscopicType::Multiview) {
         newDeviceExts.erase(VK_KHR_MULTIVIEW_EXTENSION_NAME);
     }
 
@@ -261,6 +264,113 @@ DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareCo
     return VulkanDriver::Create(this, m_pImpl->m_pContext, config);
 }
 
+VulkanPlatform::SwapChainPtr VulkanPlatform::CreateSwapChain(void *nativeWindow, uint64_t flags, VkExtent2D extent) {
+    // extent 非零即表示无窗口：此时只需虚拟尺寸，不创建 surface
+    bool const headless = extent.width != 0 && extent.height != 0;
+    if (headless) {
+        return new VulkanPlatformHeadlessSwapChain(*m_pImpl->m_pContext, GetVkDevice(), GetVkGraphicsQueue(), extent, flags);
+    }
+
+    LOG_ASSERT(nativeWindow != nullptr);
+    if ((flags & kSwapChainConfigProtectedContent) != 0 && !m_pImpl->m_pContext->IsProtectedMemorySupported()) {
+        LOG_WARN("protected swapchain requested, but VulkanPlatform does not support it");
+    }
+
+    auto [surface, fallbackExtent] = CreateVkSurfaceKHR(nativeWindow, GetVkInstance(), flags);
+    // surface 的所有权随交换链转移，由其析构时销毁
+    return new VulkanPlatformSurfaceSwapChain(*m_pImpl->m_pContext, GetVkPhysicalDevice(), GetVkDevice(), GetVkGraphicsQueue(),
+                                             GetVkInstance(), surface, fallbackExtent, flags);
+}
+
+VulkanPlatform::SwapChainBundle VulkanPlatform::GetSwapChainBundle(SwapChainPtr handle) {
+    if (handle == nullptr) {
+        return {};
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->GetSwapChainBundle();
+}
+
+VkResult VulkanPlatform::Acquire(SwapChainPtr handle, ImageSyncData *outImageSyncData) {
+    if (handle == nullptr || outImageSyncData == nullptr) {
+        return VK_ERROR_UNKNOWN;
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->Acquire(outImageSyncData);
+}
+
+VkResult VulkanPlatform::Present(SwapChainPtr handle, uint32_t index, VkSemaphore finishedDrawing) {
+    if (handle == nullptr) {
+        return VK_ERROR_UNKNOWN;
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->Present(index, finishedDrawing);
+}
+
+bool VulkanPlatform::HasResized(SwapChainPtr handle) {
+    if (handle == nullptr) {
+        return false;
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->HasResized();
+}
+
+bool VulkanPlatform::IsProtected(SwapChainPtr handle) {
+    if (handle == nullptr) {
+        return false;
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->IsProtected();
+}
+
+VkResult VulkanPlatform::Recreate(SwapChainPtr handle) {
+    if (handle == nullptr) {
+        return VK_ERROR_UNKNOWN;
+    }
+    return static_cast<VulkanPlatformSwapChainBase *>(handle)->Recreate();
+}
+
+void VulkanPlatform::Destroy(SwapChainPtr handle) {
+    delete static_cast<VulkanPlatformSwapChainBase *>(handle);
+}
+
+Platform::Sync *VulkanPlatform::CreateSync(std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
+    auto *sync        = new VulkanSync();
+    sync->fenceStatus = std::move(fenceStatus);
+    return sync;
+}
+
+void VulkanPlatform::DestroySync(Platform::Sync *sync) noexcept {
+    // sync 必为本平台创建的对象；Platform::Sync 无虚析构，须按实际类型销毁以释放其成员
+    delete static_cast<VulkanSync *>(sync);
+}
+
+void VulkanPlatform::Terminate() {
+    // 交换链由驱动持有并负责销毁，平台只释放自己创建的实例/设备（共享对象由调用方释放）
+    m_pImpl->m_pProtectedGraphicsQueue = {};
+    m_pImpl->m_pGraphicsQueue          = {};
+    m_pImpl->m_pDevice                 = {};
+    m_pImpl->m_pPhysicalDevice         = {};
+    m_pImpl->m_pInstance               = {};
+}
+
+VkInstance VulkanPlatform::CreateVkInstance(VkInstanceCreateInfo const &createInfo) noexcept {
+    VkInstance instance = VK_NULL_HANDLE;
+    VkResult   result   = vkCreateInstance(&createInfo, kVkAlloc, &instance);
+    if (result != VK_SUCCESS) {
+        LOG_CRITICAL("Unable to create Vulkan instance. error={}", static_cast<int32_t>(result));
+    }
+    return instance;
+}
+
+VkPhysicalDevice VulkanPlatform::SelectVkPhysicalDevice(VkInstance instance) noexcept {
+    Customization::GPUPreference const pref = GetCustomization().gpu;
+    return VulPhysicalDevice::Select(instance, pref.deviceName, pref.index);
+}
+
+VkDevice VulkanPlatform::CreateVkDevice(VkDeviceCreateInfo const &createInfo) noexcept {
+    VkDevice device = VK_NULL_HANDLE;
+    VkResult result = vkCreateDevice(GetVkPhysicalDevice(), &createInfo, kVkAlloc, &device);
+    if (result != VK_SUCCESS) {
+        LOG_CRITICAL("vkCreateDevice error={}", static_cast<int32_t>(result));
+    }
+    return device;
+}
+
 void VulkanPlatform::initRuntime(void *shareContext) {
     if (volkInitialize() != VK_SUCCESS) {
         LOG_CRITICAL("volkInitialize() failed");
@@ -290,12 +400,16 @@ ExtensionSet VulkanPlatform::initInstance() {
     // 共享上下文时不假设任何扩展
     if (!m_pImpl->m_sharedContext) {
         // 包含平台所需的实例扩展（如 swapchain surface 扩展）
-        auto const &swapchainExts = getSwapchainInstanceExtensions();
-        instExts                  = getInstanceExtensions(swapchainExts);
-        instExts.merge(getRequiredInstanceExtensions());
+        auto const &swapchainExts = GetSwapchainInstanceExtensions();
+        instExts                  = GetInstanceExtensions(swapchainExts);
+        instExts.merge(GetRequiredInstanceExtensions());
     }
     if (!m_pImpl->m_pInstance) {
-        m_pImpl->m_pInstance = VulInstance::Builder().SetRequiredExtensions(instExts).Build();
+        // 实例的创建经可覆写钩子，子类无需重写整个初始化流程
+        m_pImpl->m_pInstance = VulInstance::Builder()
+                                   .SetRequiredExtensions(instExts)
+                                   .SetInstanceCreator([this](VkInstanceCreateInfo const &createInfo) { return CreateVkInstance(createInfo); })
+                                   .Build();
     }
     LOG_ASSERT(m_pImpl->m_pInstance);
 
@@ -305,13 +419,13 @@ ExtensionSet VulkanPlatform::initInstance() {
 }
 
 void VulkanPlatform::selectPhysicalDevice(void *shareContext) {
-    Customization::GPUPreference const pref             = getCustomization().gpu;
+    Customization::GPUPreference const pref             = GetCustomization().gpu;
     bool const                         hasGPUPreference = pref.index >= 0 || !pref.deviceName.empty();
     LOG_ASSERT(!(hasGPUPreference && shareContext));
 
     if (!m_pImpl->m_pPhysicalDevice) {
-        m_pImpl->m_pPhysicalDevice =
-            VulPhysicalDevice::Builder().SetInstance(m_pImpl->m_pInstance).SetGPUPreference(pref.deviceName, pref.index).Build();
+        m_pImpl->m_pPhysicalDevice = VulPhysicalDevicePtr(
+            new VulPhysicalDevice(SelectVkPhysicalDevice(m_pImpl->m_pInstance->GetHandle())));
     }
     LOG_ASSERT(m_pImpl->m_pPhysicalDevice);
 
@@ -338,7 +452,7 @@ void VulkanPlatform::createLogicalDevice(DriverConfig const &config, ExtensionSe
     queryAndSetDeviceFeatures(config, instExts, deviceExts, shareContext);
 
     if (!m_pImpl->m_pDevice) {
-        VulLogicDevice::MiscDeviceFeatures requestedFeatures{};
+        MiscDeviceFeatures requestedFeatures{};
 
         if (deviceExts.contains(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
             requestedFeatures.dynamicRendering = context.m_dynamicRenderingFeatures.dynamicRendering == VK_TRUE;
@@ -352,13 +466,21 @@ void VulkanPlatform::createLogicalDevice(DriverConfig const &config, ExtensionSe
             requestedFeatures.gpuContextPriority = config.gpuContextPriority;
         }
 
+        // 逻辑设备侧的构造参数同构但归属私有层，此处显式转换以维持分层
+        VulLogicDevice::MiscDeviceFeatures const deviceFeatures = {
+            .dynamicRendering     = requestedFeatures.dynamicRendering,
+            .imageView2Don3DImage = requestedFeatures.imageView2Don3DImage,
+            .gpuContextPriority   = requestedFeatures.gpuContextPriority,
+        };
+
         m_pImpl->m_pDevice = VulLogicDevice::Builder()
                                  .SetPhysicalDevice(m_pImpl->m_pPhysicalDevice)
                                  .SetDeviceExtensions(deviceExts)
                                  .SetFeatures(context.m_physicalDeviceFeatures.features)
                                  .SetVulkan11Features(context.m_physicalDeviceVk11Features)
                                  .SetProtectedQueue(context.IsProtectedMemorySupported())
-                                 .SetRequestedFeatures(requestedFeatures)
+                                 .SetRequestedFeatures(deviceFeatures)
+                                 .SetDeviceCreator([this](VkDeviceCreateInfo const &createInfo) { return CreateVkDevice(createInfo); })
                                  .Build();
     }
 }
@@ -393,7 +515,7 @@ void VulkanPlatform::initQueues() {
     }
 }
 
-VulkanPlatform::ExtensionSet VulkanPlatform::getInstanceExtensions(ExtensionSet const &externallyRequiredExts) {
+VulkanPlatform::ExtensionSet VulkanPlatform::GetInstanceExtensions(ExtensionSet const &externallyRequiredExts) {
     ExtensionSet const TARGET_EXTS = {
         VK_KHR_SURFACE_EXTENSION_NAME,
 
@@ -494,7 +616,7 @@ void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
     context.m_protectedMemorySupported = static_cast<bool>(queryProtectedMemoryFeatures.protectedMemory);
 
     // 仅 instanced 立体渲染需要 shaderClipDistance
-    if (driverConfig.stereoscopicType != StereoscopicType::INSTANCED) {
+    if (driverConfig.stereoscopicType != StereoscopicType::Instanced) {
         context.m_physicalDeviceFeatures.features.shaderClipDistance = VK_FALSE;
     }
 
@@ -508,9 +630,17 @@ void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
         }
     }
 
+    context.m_depthClampSupported   = context.m_physicalDeviceFeatures.features.depthClamp == VK_TRUE;
+    context.m_clipDistanceSupported = context.m_physicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
+    context.m_imageCubeArraySupported =
+            context.m_physicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
+
     context.m_isUnifiedMemoryArchitecture  = hasUnifiedMemoryArchitecture(context.m_memoryProperties);
     context.m_depthStencilFormats          = findAttachmentDepthStencilFormats(m_pImpl->m_pPhysicalDevice);
     context.m_blittableDepthStencilFormats = findBlittableDepthStencilFormats(m_pImpl->m_pPhysicalDevice);
+
+    // 预热的 YCbCr 格式来自平台定制项：只有平台知道自己的外部图像编码方式
+    context.m_pipelineCachePrewarmExternalFormats = GetCustomization().pipelineCachePrewarmExternalFormats;
 }
 
 END_NS_BACKEND

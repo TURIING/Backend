@@ -29,6 +29,9 @@ public:
     };
 
     explicit VulPhysicalDevice(VkPhysicalDevice device);
+
+    // 从 instance 枚举出的设备中挑选满足要求者；供平台的可覆写选择钩子复用
+    NODISCARD static VkPhysicalDevice Select(VkInstance instance, std::string deviceName, int8_t index);
 };
 
 END_NS_BACKEND

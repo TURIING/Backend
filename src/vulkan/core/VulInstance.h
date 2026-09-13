@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <unordered_set>
 
 #include "Defines.h"
@@ -15,6 +16,9 @@ class VulInstance final : public VulObject<VkInstance> {
     struct BuilderDetails;
 
 public:
+    // 实际的 vkCreateInstance 由平台注入，使平台子类可覆写实例创建而不必重写初始化流程
+    using InstanceCreator = std::function<VkInstance(VkInstanceCreateInfo const &)>;
+
     // 创建信息（Builder 模式）
     class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct VulInstance::BuilderDetails;
@@ -24,6 +28,7 @@ public:
         ~Builder() noexcept;
         Builder &SetApplicationInfo(VkApplicationInfo const &appInfo) noexcept;
         Builder &SetRequiredExtensions(std::unordered_set<std::string> const &exts) noexcept;
+        Builder &SetInstanceCreator(InstanceCreator creator) noexcept;
         VulInstancePtr Build();
     };
 

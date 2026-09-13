@@ -47,6 +47,7 @@ struct VulInstance::BuilderDetails {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     };
     std::unordered_set<std::string> m_requiredExts;
+    InstanceCreator                 m_instanceCreator;
 };
 
 VulInstance::VulInstance(VkInstance instance, bool shared) {
@@ -81,6 +82,11 @@ VulInstance::Builder &VulInstance::Builder::SetApplicationInfo(
 VulInstance::Builder &VulInstance::Builder::SetRequiredExtensions(
         std::unordered_set<std::string> const &exts) noexcept {
     m_pImpl->m_requiredExts = exts;
+    return *this;
+}
+
+VulInstance::Builder &VulInstance::Builder::SetInstanceCreator(InstanceCreator creator) noexcept {
+    m_pImpl->m_instanceCreator = std::move(creator);
     return *this;
 }
 
@@ -147,11 +153,11 @@ VulInstancePtr VulInstance::Builder::Build() {
         VK_UTILS::chainStruct(&instanceCreateInfo, &features);
     }
 
-    VkInstance instance = VK_NULL_HANDLE;
-    VkResult result     = vkCreateInstance(&instanceCreateInfo, nullptr, &instance);
-    if (result != VK_SUCCESS) {
-        LOG_CRITICAL("Unable to create Vulkan instance. error={}", static_cast<int32_t>(result));
+    // 创建动作由平台注入，实例的错误处理与兜底也由平台负责
+    if (!m_pImpl->m_instanceCreator) {
+        LOG_CRITICAL("Vulkan instance creator is not set");
     }
+    VkInstance instance = m_pImpl->m_instanceCreator(instanceCreateInfo);
     return VulInstancePtr(new VulInstance(instance));
 }
 

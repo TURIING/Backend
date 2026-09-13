@@ -57,9 +57,9 @@ VulPhysicalDevice::Builder &VulPhysicalDevice::Builder::SetGPUPreference(
     return *this;
 }
 
-VulPhysicalDevicePtr VulPhysicalDevice::Builder::Build() {
+VkPhysicalDevice VulPhysicalDevice::Select(VkInstance instance, std::string deviceName, int8_t index) {
     std::vector<VkPhysicalDevice> const physicalDevices =
-        VK_UTILS::enumerate(vkEnumeratePhysicalDevices, m_pImpl->m_instance->GetHandle());
+        VK_UTILS::enumerate(vkEnumeratePhysicalDevices, instance);
 
     struct DeviceInfo {
         VkPhysicalDevice    device      = VK_NULL_HANDLE;
@@ -111,34 +111,39 @@ VulPhysicalDevicePtr VulPhysicalDevice::Builder::Build() {
         };
     }
 
-    LOG_ASSERT(m_pImpl->m_index < static_cast<int32_t>(deviceList.size()));
+    LOG_ASSERT(index < static_cast<int32_t>(deviceList.size()));
 
     std::sort(deviceList.begin(), deviceList.end(),
-        [this](DeviceInfo const &a, DeviceInfo const &b) {
+        [&deviceName, index](DeviceInfo const &a, DeviceInfo const &b) {
             if (b.device == VK_NULL_HANDLE) {
                 return false;
             }
             if (a.device == VK_NULL_HANDLE) {
                 return true;
             }
-            if (!m_pImpl->m_deviceName.empty()) {
-                if (a.name.find(m_pImpl->m_deviceName.c_str()) != a.name.npos) {
+            if (!deviceName.empty()) {
+                if (a.name.find(deviceName.c_str()) != a.name.npos) {
                     return false;
                 }
-                if (b.name.find(m_pImpl->m_deviceName.c_str()) != b.name.npos) {
+                if (b.name.find(deviceName.c_str()) != b.name.npos) {
                     return true;
                 }
             }
-            if (m_pImpl->m_index == a.index) {
+            if (index == a.index) {
                 return false;
             }
-            if (m_pImpl->m_index == b.index) {
+            if (index == b.index) {
                 return true;
             }
             return DeviceTypeOrder(a.deviceType) < DeviceTypeOrder(b.deviceType);
         });
-    auto device = deviceList.back().device;
+    auto const device = deviceList.back().device;
     LOG_ASSERT(device != VK_NULL_HANDLE);
+    return device;
+}
+
+VulPhysicalDevicePtr VulPhysicalDevice::Builder::Build() {
+    auto const device = Select(m_pImpl->m_instance->GetHandle(), m_pImpl->m_deviceName, m_pImpl->m_index);
     return VulPhysicalDevicePtr(new VulPhysicalDevice(device));
 }
 

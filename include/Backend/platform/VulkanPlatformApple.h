@@ -6,8 +6,7 @@ BEGIN_NS_BACKEND
 
 class VulkanPlatformApple : public VulkanPlatform {
 public:
-    ExtensionSet getSwapchainInstanceExtensions() const override;
-    VkSurfaceKHR createVkSurfaceKHR(void *nativeWindow, VkInstance instance,
-                                    uint64_t flags) const noexcept override;
+    ExtensionSet GetSwapchainInstanceExtensions() const override;
+    SurfaceBundle CreateVkSurfaceKHR(void *nativeWindow, VkInstance instance, uint64_t flags) const noexcept override;
 };
 END_NS_BACKEND
