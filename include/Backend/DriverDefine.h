@@ -61,6 +61,19 @@ enum class BufferUsage : uint8_t {
     SHARED_WRITE_BIT = 0x04,  //!< 可内存映射写（位标志）
 };
 
+constexpr BufferUsage operator|(BufferUsage lhs, BufferUsage rhs) noexcept {
+    return static_cast<BufferUsage>(static_cast<uint8_t>(lhs) | static_cast<uint8_t>(rhs));
+}
+
+constexpr BufferUsage operator&(BufferUsage lhs, BufferUsage rhs) noexcept {
+    return static_cast<BufferUsage>(static_cast<uint8_t>(lhs) & static_cast<uint8_t>(rhs));
+}
+
+// 任一标志命中即真；STATIC 恰为 0，故不提供 operator bool
+constexpr bool HasAnyFlag(BufferUsage value, BufferUsage flags) noexcept {
+    return static_cast<uint8_t>(value & flags) != 0;
+}
+
 /**
  * 缓冲对象在渲染管线中的绑定点
  */

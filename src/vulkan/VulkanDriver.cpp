@@ -115,7 +115,7 @@ void VulkanDriver::CreateVertexBufferR(Handle<HwVertexBuffer> vbh, uint32_t vert
 Handle<HwBufferObject> VulkanDriver::CreateBufferObjectS() noexcept { return m_resMgr->AllocHandle<VulkanBufferObject>(); }
 void VulkanDriver::CreateBufferObjectR(Handle<HwBufferObject> boh, uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage,
                                        NS_UTILS::ImmutableString &&tag) {
-    auto bo = m_resMgr->Make<VulkanBufferObject>(boh, m_context, m_allocator, m_bufferCache, byteCount, bindingType, usage);
+    auto bo = m_resMgr->Make<VulkanBufferObject>(boh, m_context, m_allocator, m_stagePool, m_bufferCache, byteCount, bindingType, usage);
     m_resMgr->AssociateTagToHandle(boh.GetId(), std::move(tag));
 }
 
@@ -131,7 +131,7 @@ Handle<HwIndexBuffer> VulkanDriver::CreateIndexBufferS() noexcept { return m_res
 void VulkanDriver::CreateIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType, uint32_t indexCount, BufferUsage,
                                       NS_UTILS::ImmutableString &&tag) {
     auto const elementSize = static_cast<uint8_t>(Driver::GetElementTypeSize(elementType));
-    auto       ib          = m_resMgr->Make<VulkanIndexBuffer>(ibh, m_context, m_allocator, m_bufferCache, elementSize, indexCount);
+    auto       ib          = m_resMgr->Make<VulkanIndexBuffer>(ibh, m_context, m_allocator, m_stagePool, m_bufferCache, elementSize, indexCount);
     m_resMgr->AssociateTagToHandle(ibh.GetId(), std::move(tag));
 }
 

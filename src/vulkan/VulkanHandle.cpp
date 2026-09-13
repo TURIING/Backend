@@ -115,18 +115,20 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attr
     }
 }
 
-VulkanBufferObject::VulkanBufferObject(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache,
-                                       uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage)
+VulkanBufferObject::VulkanBufferObject(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanStagePoolPtr& stagePool,
+                                       const VulkanBufferCachePtr& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType,
+                                       BufferUsage usage)
     : HwBufferObject(byteCount, false),
       bindingType(bindingType),
-      m_buffer(context, allocator, bufferCache, GetBufferObjectBinding(bindingType), usage, byteCount) {}
+      m_buffer(context, allocator, stagePool, bufferCache, GetBufferObjectBinding(bindingType), usage, byteCount) {}
 
 void VulkanBufferObject::LoadFromCpu(VulkanCommandBuffer& commands, void const* cpuData, uint32_t byteOffset, uint32_t numBytes) {}
 
-VulkanIndexBuffer::VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache,
-                                     uint8_t elementSize, uint32_t indexCount)
+VulkanIndexBuffer::VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanStagePoolPtr& stagePool,
+                                     const VulkanBufferCachePtr& bufferCache, uint8_t elementSize, uint32_t indexCount)
     : HwIndexBuffer(elementSize, indexCount, false),
       indexType(elementSize == sizeof(uint16_t) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
-      m_buffer(context, allocator, bufferCache, VulkanBufferBinding::Index, BufferUsage::STATIC, static_cast<uint32_t>(elementSize) * indexCount) {}
+      m_buffer(context, allocator, stagePool, bufferCache, VulkanBufferBinding::Index, BufferUsage::STATIC,
+               static_cast<uint32_t>(elementSize) * indexCount) {}
 
 END_NS_BACKEND

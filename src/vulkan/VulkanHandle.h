@@ -69,8 +69,8 @@ private:
 DECLARE_SHARE_PTR_CLASS(VulkanVertexBufferInfo);
 
 struct VulkanBufferObject : public HwBufferObject, public Resource {
-    VulkanBufferObject(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache, uint32_t byteCount,
-                       BufferObjectBinding bindingType, BufferUsage usage);
+    VulkanBufferObject(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanStagePoolPtr& stagePool,
+                       const VulkanBufferCachePtr& bufferCache, uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage);
 
     // 上传通道尚未移植：内容不会写入 GPU，调用方读到的是缓冲初始内容
     void LoadFromCpu(VulkanCommandBuffer& commands, void const* cpuData, uint32_t byteOffset, uint32_t numBytes);
@@ -85,8 +85,8 @@ private:
 DECLARE_SHARE_PTR_CLASS(VulkanBufferObject);
 
 struct VulkanIndexBuffer : public HwIndexBuffer, public Resource {
-    VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache, uint8_t elementSize,
-                      uint32_t indexCount);
+    VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanStagePoolPtr& stagePool,
+                      const VulkanBufferCachePtr& bufferCache, uint8_t elementSize, uint32_t indexCount);
 
     NODISCARD VkBuffer GetVkBuffer() const noexcept { return m_buffer.GetVkBuffer(); }
 
