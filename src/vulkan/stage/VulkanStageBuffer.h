@@ -82,6 +82,6 @@ private:
 };
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanStageBuffer::Segment>() noexcept;
+ResourceType Resource::GetTypeEnum<VulkanStageBuffer::Segment>() const noexcept;
 
 END_NS_BACKEND

@@ -80,6 +80,11 @@ public:
     void Print() const noexcept;
     void Terminate() noexcept;
 
+    // 待回收队列的长度。两条队列的区分是资源分类正确性的直接观测量，
+    // 供调试与运行时验证使用
+    NODISCARD size_t GetPendingGcCount() const noexcept;
+    NODISCARD size_t GetPendingThreadSafeGcCount() const noexcept;
+
 private:
     using GcList = std::vector<std::pair<ResourceType, HandleBase::HandleId>>;
 
@@ -103,8 +108,10 @@ private:
     void traceConstruction(ResourceType type, HandleBase::HandleId id);
 
     HandleAllocatorVK m_handleAllocator;
-    std::mutex        m_gcListMutex;
-    GcList            m_gcList;
+    mutable std::mutex m_gcListMutex;
+    GcList             m_gcList;
+    mutable std::mutex m_threadSafeGcListMutex;
+    GcList             m_threadSafeGcList;
 
     friend struct Resource;
 };

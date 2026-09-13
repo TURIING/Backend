@@ -43,32 +43,103 @@ void Resource::OnLastRef() {
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanBuffer>() const noexcept {
     return ResourceType::VulkanBuffer;
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanBufferObject>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanBufferObject>() const noexcept {
     return ResourceType::BufferObject;
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanIndexBuffer>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanIndexBuffer>() const noexcept {
     return ResourceType::IndexBuffer;
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() const noexcept {
     return ResourceType::VertexBufferInfo;
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanVertexBuffer>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanVertexBuffer>() const noexcept {
     return ResourceType::VertexBuffer;
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanSemaphore>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanSemaphore>() const noexcept {
     return ResourceType::Semaphore;
 }
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanTexture>() const noexcept {
+    return ResourceType::Texture;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanTextureState>() const noexcept {
+    return ResourceType::TextureState;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanSwapChain>() const noexcept {
+    return ResourceType::SwapChain;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanRenderTarget>() const noexcept {
+    return ResourceType::RenderTarget;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanFramebuffer>() const noexcept {
+    return ResourceType::Framebuffer;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanRenderPass>() const noexcept {
+    return ResourceType::RenderPass;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanProgram>() const noexcept {
+    return ResourceType::Program;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanFence>() const noexcept {
+    return ResourceType::Fence;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanSync>() const noexcept {
+    return ResourceType::Sync;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanTimerQuery>() const noexcept {
+    return ResourceType::TimerQuery;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanDescriptorSetLayout>() const noexcept {
+    return ResourceType::DescriptorSetLayout;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanDescriptorSet>() const noexcept {
+    return ResourceType::DescriptorSet;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanMemoryMappedBuffer>() const noexcept {
+    return ResourceType::MemoryMappedBuffer;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanRenderPrimitive>() const noexcept {
+    return ResourceType::RenderPrimitive;
+}
+
 END_NS_BACKEND

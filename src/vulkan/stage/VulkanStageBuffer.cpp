@@ -28,7 +28,7 @@ VulkanStageBuffer::SegmentPtr VulkanStageBuffer::AcquireSegment(const ResourceMa
 }
 
 template <>
-ResourceType Resource::GetTypeEnum<VulkanStageBuffer::Segment>() noexcept {
+ResourceType Resource::GetTypeEnum<VulkanStageBuffer::Segment>() const noexcept {
     return ResourceType::StageSegment;
 }
 
