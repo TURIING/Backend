@@ -1,5 +1,13 @@
 #include "Engine.h"
 
+#include "DriverBase.h"
+
+#include "Backend/Driver.h"
+
+#include "vulkan/VulkanDriver.h"
+
+#include <condition_variable>
+#include <mutex>
 #include <utility>
 #include <vector>
 
@@ -47,6 +55,7 @@ EnginePtr Engine::Builder::Build() {
 Engine::Engine(Backend::BackendType type, Backend::DriverConfig config, size_t requiredSize, size_t bufferSize)
         : m_platform(Backend::PlatformFactory::Create(type)),
           m_driver(m_platform ? m_platform->CreateDriver(config, nullptr) : Backend::DriverPtr()),
+          m_vkPlatform(dynamic_cast<Backend::VulkanPlatform*>(m_platform.Get())),
           m_queue(requiredSize, bufferSize, false) {
 }
 
@@ -93,7 +102,7 @@ void Engine::Flush() {
 }
 
 void Engine::Finish() {
-    m_stream->finish();
+    FlushAndFinish();
 }
 
 Backend::FenceHandle Engine::CreateFence() {
@@ -118,6 +127,141 @@ void Engine::ResetState() {
 
 void Engine::QueueCommand(std::function<void()> command) {
     m_stream->QueueCommand(std::move(command));
+}
+
+Backend::VulkanPlatform* Engine::GetVulkanPlatform() const noexcept {
+    return m_vkPlatform;
+}
+
+Backend::SwapChainHandle Engine::CreateSwapChainHeadless(uint32_t width, uint32_t height, uint64_t flags) {
+    return m_stream->CreateSwapChainHeadless(width, height, flags);
+}
+
+void Engine::DestroySwapChain(Backend::SwapChainHandle sch) {
+    m_stream->DestroySwapChain(sch);
+}
+
+Backend::ProgramHandle Engine::CreateProgram(Backend::Program&& program) {
+    return m_stream->CreateProgram(std::move(program));
+}
+
+void Engine::DestroyProgram(Backend::ProgramHandle ph) {
+    m_stream->DestroyProgram(ph);
+}
+
+Backend::VertexBufferInfoHandle Engine::CreateVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount,
+                                                              Backend::AttributeArray const& attributes) {
+    return m_stream->CreateVertexBufferInfo(bufferCount, attributeCount, attributes);
+}
+
+void Engine::DestroyVertexBufferInfo(Backend::VertexBufferInfoHandle vbih) {
+    m_stream->DestroyVertexBufferInfo(vbih);
+}
+
+Backend::VertexBufferHandle Engine::CreateVertexBuffer(uint32_t vertexCount, Backend::VertexBufferInfoHandle vbih) {
+    return m_stream->CreateVertexBuffer(vertexCount, vbih);
+}
+
+void Engine::DestroyVertexBuffer(Backend::VertexBufferHandle vbh) {
+    m_stream->DestroyVertexBuffer(vbh);
+}
+
+Backend::BufferObjectHandle Engine::CreateBufferObject(uint32_t byteCount, Backend::BufferObjectBinding bindingType,
+                                                       Backend::BufferUsage usage) {
+    return m_stream->CreateBufferObject(byteCount, bindingType, usage);
+}
+
+void Engine::DestroyBufferObject(Backend::BufferObjectHandle boh) {
+    m_stream->DestroyBufferObject(boh);
+}
+
+void Engine::UpdateBufferObject(Backend::BufferObjectHandle boh, Backend::BufferDescriptor&& data, uint32_t byteOffset) {
+    m_stream->UpdateBufferObject(boh, std::move(data), byteOffset);
+}
+
+void Engine::SetVertexBufferObject(Backend::VertexBufferHandle vbh, uint32_t index, Backend::BufferObjectHandle boh) {
+    m_stream->SetVertexBufferObject(vbh, index, boh);
+}
+
+Backend::RenderPrimitiveHandle Engine::CreateRenderPrimitive(Backend::VertexBufferHandle vbh, Backend::IndexBufferHandle ibh,
+                                                            Backend::PrimitiveType pt) {
+    return m_stream->CreateRenderPrimitive(vbh, ibh, pt);
+}
+
+void Engine::DestroyRenderPrimitive(Backend::RenderPrimitiveHandle rph) {
+    m_stream->DestroyRenderPrimitive(rph);
+}
+
+Backend::RenderTargetHandle Engine::CreateDefaultRenderTarget() {
+    return m_stream->CreateDefaultRenderTarget();
+}
+
+void Engine::MakeCurrent(Backend::SwapChainHandle drawSch, Backend::SwapChainHandle readSch) {
+    m_stream->MakeCurrent(drawSch, readSch);
+}
+
+void Engine::BeginRenderPass(Backend::RenderTargetHandle rth, Backend::RenderPassParams const& params) {
+    m_stream->BeginRenderPass(rth, params);
+}
+
+void Engine::EndRenderPass() {
+    m_stream->EndRenderPass();
+}
+
+void Engine::BindPipeline(Backend::PipelineState const& state) {
+    m_stream->BindPipeline(state);
+}
+
+void Engine::BindRenderPrimitive(Backend::RenderPrimitiveHandle rph) {
+    m_stream->BindRenderPrimitive(rph);
+}
+
+void Engine::DrawArrays(uint32_t vertexOffset, uint32_t vertexCount, uint32_t instanceCount) {
+    m_stream->DrawArrays(vertexOffset, vertexCount, instanceCount);
+}
+
+void Engine::Commit(Backend::SwapChainHandle sch) {
+    m_stream->Commit(sch);
+}
+
+void Engine::ReadPixels(Backend::RenderTargetHandle src, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+                        Backend::PixelBufferDescriptor&& pbd) {
+    m_stream->ReadPixels(src, x, y, width, height, std::move(pbd));
+
+    // ReadPixels 的记录与读回线程的投递都发生在渲染线程上：若在调用线程直接调 finish()，
+    // readPixels 可能尚未登记，Drain 也就等不到结果。故把 finish 本身也交给渲染线程执行
+    FlushAndFinish();
+}
+
+bool Engine::FlushAndFinish() {
+    std::mutex              mutex;
+    std::condition_variable condition;
+    bool                    finished = false;
+
+    m_stream->QueueCommand([&] {
+        // 经命令流再调 finish() 会从命令流分配命令，而执行本命令的渲染线程不是录制线程；
+        // 直接调驱动即可。此处用具体类型指针：DriverBase 侧的同名非虚包装不会转发到实现
+        static_cast<Backend::VulkanDriver*>(m_driver.Get())->finish(0);
+        {
+            std::lock_guard const lock(mutex);
+            finished = true;
+        }
+        condition.notify_one();
+    });
+    m_queue.Flush();
+
+    std::unique_lock lock(mutex);
+    condition.wait(lock, [&finished] { return finished; });
+    return true;
+}
+
+void Engine::WaitForReadPixels() {
+    // 读回请求登记在渲染线程上，故必须先把线程推过去
+    FlushAndFinish();
+}
+
+Backend::DriverBase* Engine::GetDriverBase() const noexcept {
+    return static_cast<Backend::DriverBase*>(m_driver.Get());
 }
 
 void Engine::Terminate() {

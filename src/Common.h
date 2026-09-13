@@ -5,5 +5,3 @@
 
 #include <bitset>
 #include <unordered_set>
-
-#include "Macro.h"

@@ -1,28 +1,52 @@
 #pragma once
 
+#include "Backend/BufferDescriptor.h"
 #include "Backend/Driver.h"
 #include "Backend/DriverDefine.h"
+#include "Backend/PixelBufferDescriptor.h"
 #include "Backend/platform/Platform.h"
 #include "Backend/platform/VulkanPlatform.h"
 
+#include "DriverBase.h"
 #include "Utils/Utils.h"
 
+#include "VulkanBlitter.h"
+#include "VulkanConstants.h"
 #include "VulkanContext.h"
+#include "VulkanDescriptorSetCache.h"
+#include "VulkanDescriptorSetLayoutCache.h"
+#include "VulkanFboCache.h"
+#include "VulkanMemory.h"
+#include "VulkanPipelineCache.h"
+#include "VulkanPipelineLayoutCache.h"
+#include "VulkanQueryManager.h"
+#include "VulkanReadPixels.h"
+#include "VulkanSamplerCache.h"
+#include "VulkanTexture.h"
+#include "VulkanYcbcrConversionCache.h"
 #include "buffer/VulkanBufferCache.h"
+#include "commands/VulkanCommands.h"
+#include "resource/ResourceManager.h"
 #include "stage/VulkanStagePool.h"
+#include "sync/VulkanSemaphoreManager.h"
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <mutex>
+#include <unordered_map>
+#include <utility>
+#include <variant>
 
 #undef DECL_DRIVER_API
 #undef DECL_DRIVER_API_SYNCHRONOUS
 #undef DECL_DRIVER_API_RETURN
 BEGIN_NS_BACKEND
 
-DECLARE_CLASS_AND_SHARE_PTR(VulkanPlatform);
-DECLARE_CLASS_AND_SHARE_PTR(VulkanContext);
-DECLARE_CLASS_AND_SHARE_PTR(ResourceManager);
-
-class VulkanDriver : public Driver {
+class VulkanDriver final : public DriverBase {
 public:
-    VulkanDriver(const VulkanPlatformPtr &platform, const VulkanContextPtr &context, const DriverConfig &config);
+    VulkanDriver(VulkanPlatform *platform, const VulkanContextPtr &context, const DriverConfig &config);
     ~VulkanDriver() noexcept override;
 
     static DriverPtr Create(VulkanPlatform *platform, const VulkanContextPtr &context, const DriverConfig &config);
@@ -41,13 +65,106 @@ public:
 #include "Backend/DriverAPI.inc"
 
 private:
+    void DebugCommandBegin(CommandStream *cmds, bool synchronous, char const *methodName) noexcept override;
+
     void DestroyResources() noexcept;
 
-    ResourceManagerPtr   m_resMgr;
-    VulkanContextPtr     m_context;
-    VmaAllocator         m_allocator = VK_NULL_HANDLE;
-    VulkanBufferCachePtr m_bufferCache;
-    VulkanStagePoolPtr   m_stagePool;
+    void collectGarbage();
+    void bindPipelineImpl(PipelineState const &pipelineState, VkPipelineLayout pipelineLayout, VK_UTILS::DescriptorSetMask descriptorSetMask);
+
+    // 索引与非索引绘制共用的前置步骤：处理 bindInDraw 的延迟布局绑定并提交描述符集
+    void prepareDraw();
+
+    void endCommandRecording();
+
+    // 返回是否成功取得下一张交换链图像
+    NODISCARD bool acquireNextSwapchainImage();
+
+    // BufferDescriptor / PixelBufferDescriptor 的析构会触发应用回调，必须延后到在途命令
+    // 都完成之后再执行，否则应用释放的内存可能仍被 GPU 读取
+    void deferDestroy(BufferDescriptor&& data);
+    void deferDestroy(PixelBufferDescriptor&& data);
+    void collectDescriptors();
+
+    NODISCARD bool skipDueToEmptyRenderPass() const { return !bool(mCurrentRenderPass.renderTarget); }
+
+    // 成员声明顺序即构造初始化顺序（-Wreorder 校验），改动须与 .cpp 的初始化列表同步
+    VulkanPlatformPtr mPlatform;
+    ResourceManagerPtr m_resMgr;
+
+    VulkanSwapChainPtr      mCurrentSwapChain;
+    VulkanRenderTargetPtr   mDefaultRenderTarget;
+    VulkanRenderPassContext mCurrentRenderPass = {};
+    VmaAllocator            m_allocator        = VK_NULL_HANDLE;
+
+    VulkanContextPtr m_context;
+
+    VulkanSemaphoreManagerPtr      m_semaphoreManager;
+    VulkanCommands                 m_commands;
+    VulkanPipelineLayoutCache      m_pipelineLayoutCache;
+    VulkanPipelineCache            m_pipelineCache;
+    VulkanStagePoolPtr             m_stagePool;
+    VulkanBufferCachePtr           m_bufferCache;
+    VulkanFboCache                 m_framebufferCache;
+    VulkanYcbcrConversionCache     m_ycbcrConversionCache;
+    VulkanSamplerCache             m_samplerCache;
+    VulkanBlitter                  m_blitter;
+    VulkanReadPixels               m_readPixels;
+    VulkanDescriptorSetLayoutCache m_descriptorSetLayoutCache;
+    VulkanDescriptorSetCache       m_descriptorSetCache;
+    VulkanQueryManager             m_queryManager;
+
+    // 合成器时序查询是同步调用，而 VulkanSwapChain 由引用计数管理，无法安全跨线程访问，
+    // 故在此另存一份「句柄 → 平台交换链」映射
+    struct {
+        std::mutex                                                      lock;
+        std::unordered_map<HandleBase::HandleId, Platform::SwapChain *> nativeSwapchains;
+    } mTiming;
+
+    using DescriptorSetLayoutHandleList =
+            std::array<VulkanDescriptorSetLayoutPtr, VulkanDescriptorSetLayout::kUniqueDescriptorSetCount>;
+
+    struct BindInDrawBundle {
+        PipelineState                 pipelineState    = {};
+        DescriptorSetLayoutHandleList dsLayoutHandles = {};
+        VK_UTILS::DescriptorSetMask   descriptorSetMask = {};
+        VulkanProgramPtr              program          = {};
+    };
+
+    struct {
+        // push constant 的写入目标
+        VulkanProgramPtr program = {};
+        // draw() 中提交动态 ubo 时使用
+        VkPipelineLayout            pipelineLayout    = VK_NULL_HANDLE;
+        VK_UTILS::DescriptorSetMask descriptorSetMask = {};
+
+        std::pair<bool, BindInDrawBundle> bindInDraw = { false, {} };
+    } mPipelineState {};
+
+    struct {
+        // 应用是否已把外部采样器绑到描述符集上：一旦发生，bindPipeline 必须走慢路径
+        bool hasExternalSamplerLayouts = false;
+        bool hasBoundExternalImages    = false;
+
+        NODISCARD bool HasExternalSamplers() const noexcept { return hasExternalSamplerLayouts && hasBoundExternalImages; }
+    } mAppState {};
+
+    struct {
+        bool bound = false;
+    } mRenderPrimitiveState {};
+
+    bool const             mIsSRGBSwapChainSupported;
+    StereoscopicType const mStereoscopicType;
+    uint8_t const          mStereoscopicEyeCount;
+    AsynchronousMode const mAsynchronousMode;
+
+    uint8_t m_ticksSinceLastGc = 0;
+
+    struct PendingDescriptor {
+        std::variant<BufferDescriptor, PixelBufferDescriptor> data;
+        uint32_t                                              submittedAge;
+    };
+    std::deque<PendingDescriptor> m_pendingDescriptors;
 };
 
 END_NS_BACKEND
