@@ -1,13 +1,26 @@
 #pragma once
 
+#include <chrono>
 #include <functional>
+#include <type_traits>
 
-#include "DriverDefine.h"
-#include "Handle.h"
+#include "Backend/BufferDescriptor.h"
+#include "Backend/CallbackHandler.h"
+#include "Backend/DriverDefine.h"
+#include "Backend/Handle.h"
+#include "Backend/PixelBufferDescriptor.h"
+#include "Backend/Program.h"
+#include "Backend/TargetBufferInfo.h"
+
+#include "Utils/math/Matrix.h"
 
 BEGIN_NS_BACKEND
 
+class CommandStream;
 class Dispatcher;
+
+// 命令流别名：驱动接口签名的书写形式（与上游 DriverApiForward.h 一致）
+using DriverApi = CommandStream;
 
 // 异步方法非虚、经命令流排队，同步方法纯虚、直接调用，避免记录端虚调用
 class Driver : public NS_UTILS::Ref {
@@ -19,6 +32,19 @@ public:
 
     // 命令批执行钩子，默认直接执行；驱动可借此包装（如 GPU 上下文切换）
     virtual void Execute(std::function<void()> const& fn) { fn(); }
+
+    // 由主线程（非渲染线程）周期性调用，驱动在此执行用户回调
+    virtual void Purge() noexcept = 0;
+
+    // 由渲染线程调用：handler 非空时经其派发，为空时留给 Purge() 在主线程执行
+    virtual void ScheduleCallback(CallbackHandler* handler, void* user, CallbackHandler::Callback callback) = 0;
+
+    // 标记驱动遇到不可恢复错误：中断全部待决的围栏等待，且阻止后续等待
+    virtual void SetUnrecoverableError() noexcept {}
+
+    // 仅在调试构建或手动开启时被调用
+    virtual void DebugCommandBegin(CommandStream* cmds, bool synchronous, char const* methodName) noexcept = 0;
+    virtual void DebugCommandEnd(CommandStream* cmds, bool synchronous, char const* methodName) noexcept = 0;
 
     NODISCARD static size_t GetElementTypeSize(ElementType type) noexcept;
 

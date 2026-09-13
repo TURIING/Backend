@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Backend/DriverDefine.h"
+#include "Backend/Namespace.h"
 
 #include "Utils/Log.h"
+#include "Utils/Utils.h"
 
 #include <cstdint>
 #include <type_traits>
