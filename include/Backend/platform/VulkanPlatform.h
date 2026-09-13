@@ -38,13 +38,18 @@ public:
 
     VulkanPlatform() noexcept;
     ~VulkanPlatform() noexcept;
-    DriverPtr            CreateDriver(const DriverConfig &config, void *shareContext) override;
+    DriverPtr CreateDriver(const DriverConfig &config, void *shareContext) override;
     virtual ExtensionSet getSwapchainInstanceExtensions() const = 0;
 
     // 供 driver 创建 VMA allocator 等需要原生句柄的场景使用
     NODISCARD VkInstance GetVkInstance() const noexcept;
     NODISCARD VkPhysicalDevice GetVkPhysicalDevice() const noexcept;
     NODISCARD VkDevice GetVkDevice() const noexcept;
+
+    // 供命令录制层构造 VulkanCommands 使用
+    NODISCARD uint32_t GetGraphicsQueueFamilyIndex() const noexcept;
+    NODISCARD uint32_t GetGraphicsQueueIndex() const noexcept;
+    NODISCARD VkQueue GetVkGraphicsQueue() const noexcept;
 
     /**
      * @brief 返回始终需要启用的实例扩展（默认无）
@@ -68,14 +73,14 @@ public:
     ExtensionSet getInstanceExtensions(ExtensionSet const &externallyRequiredExts = {});
 
 private:
-    void         initRuntime(void *shareContext);
+    void initRuntime(void *shareContext);
     ExtensionSet initInstance();
-    void         selectPhysicalDevice(void *shareContext);
+    void selectPhysicalDevice(void *shareContext);
     ExtensionSet initDeviceExtensions(DriverConfig const &config, ExtensionSet &instExts);
-    void         createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
-    void         initQueues();
-    void         queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
-                                           void *sharedContext) noexcept;
+    void createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
+    void initQueues();
+    void queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
+                                   void *sharedContext) noexcept;
 };
 DECLARE_SHARE_PTR_CLASS(VulkanPlatform);
 

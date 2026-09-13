@@ -2,6 +2,7 @@
 
 #include "Backend/Handle.h"
 
+#include "Utils/Utils.h"
 #include "Utils/mem/Ref.h"
 
 #include <cstdint>
@@ -11,6 +12,7 @@ BEGIN_NS_BACKEND
 
 class ResourceManager;
 class VulkanBuffer;
+struct VulkanSemaphore;
 struct VulkanVertexBufferInfo;
 struct VulkanVertexBuffer;
 
@@ -83,6 +85,7 @@ private:
 
     friend class ResourceManager;
 };
+DECLARE_SHARE_PTR_CLASS(Resource);
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept;
@@ -92,5 +95,8 @@ ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept;
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanVertexBuffer>() noexcept;
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanSemaphore>() noexcept;
 
 END_NS_BACKEND

@@ -4,6 +4,7 @@
 #include "vulkan/VulkanHandle.h"
 #include "vulkan/buffer/VulkanBuffer.h"
 #include "vulkan/stage/VulkanStageBuffer.h"
+#include "vulkan/sync/VulkanSemaphore.h"
 
 #include <utility>
 
@@ -51,6 +52,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleBase::HandleId id
             break;
         case ResourceType::StageSegment:
             destruct<VulkanStageBuffer::Segment>(Handle<VulkanStageBuffer::Segment>(id));
+            break;
+        case ResourceType::Semaphore:
+            destruct<VulkanSemaphore>(Handle<VulkanSemaphore>(id));
             break;
         default:
             break;

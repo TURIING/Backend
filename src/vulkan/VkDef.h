@@ -12,6 +12,12 @@ constexpr uint32_t INVALID_VK_INDEX            = UINT32_MAX;
 constexpr uint32_t kRequiredVulkanVersionMajor = 1;
 constexpr uint32_t kRequiredVulkanVersionMinor = 1;
 
+// vkCreate*/vkDestroy* 的分配器实参统一用默认分配器，此常量用于标注该实参的含义
+constexpr VkAllocationCallbacks const *kVkAlloc = nullptr;
+
+// VulkanCommands 同时管理的命令缓冲上限；经验值：三缓冲 × 单帧最大 renderpass 数
+constexpr int kMaxCommandBuffers = 3 * 15;
+
 /********************************** Debug flag **************************************/
 
 #define BVK_DEBUG_SYSTRACE 0x00000001

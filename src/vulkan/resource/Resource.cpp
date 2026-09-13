@@ -56,4 +56,9 @@ template <>
 ResourceType Resource::GetTypeEnum<VulkanVertexBuffer>() noexcept {
     return ResourceType::VertexBuffer;
 }
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanSemaphore>() noexcept {
+    return ResourceType::Semaphore;
+}
 END_NS_BACKEND

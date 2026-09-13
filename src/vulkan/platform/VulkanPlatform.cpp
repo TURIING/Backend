@@ -53,8 +53,7 @@ void printDeviceInfo(VulInstancePtr const &instance, VulPhysicalDevicePtr const 
     int const      major         = VK_VERSION_MAJOR(deviceProperties.apiVersion);
     int const      minor         = VK_VERSION_MINOR(deviceProperties.apiVersion);
 
-    std::vector<VkPhysicalDevice> const physicalDevices =
-        VK_UTILS::enumerate(vkEnumeratePhysicalDevices, instance->GetHandle());
+    std::vector<VkPhysicalDevice> const physicalDevices = VK_UTILS::enumerate(vkEnumeratePhysicalDevices, instance->GetHandle());
 
     LOG_INFO(
         "Selected physical device '{}' from {} physical devices. (vendor {:#x}, device {:#x}, "
@@ -65,8 +64,7 @@ void printDeviceInfo(VulInstancePtr const &instance, VulPhysicalDevicePtr const 
 #if BVK_ENABLED(BVK_DEBUG_VALIDATION)
 void printDepthFormats(VulPhysicalDevicePtr const &device) {
     // 诊断用途：打印可用的深度格式
-    constexpr VkFormatFeatureFlags required =
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    constexpr VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
     LOG_INFO("Sampleable depth formats: ");
     for (VkFormat const format : ALL_VK_FORMATS) {
         // 跳过需要扩展支持的格式
@@ -114,9 +112,9 @@ ExtensionSet getDeviceExtensions(VulPhysicalDevicePtr const &device) {
 #endif
     };
 
-    ExtensionSet exts;
-    std::vector<VkExtensionProperties> const extensions = VK_UTILS::enumerate(
-        vkEnumerateDeviceExtensionProperties, device->GetHandle(), static_cast<char const *>(nullptr) /* pLayerName */);
+    ExtensionSet                             exts;
+    std::vector<VkExtensionProperties> const extensions =
+        VK_UTILS::enumerate(vkEnumerateDeviceExtensionProperties, device->GetHandle(), static_cast<char const *>(nullptr) /* pLayerName */);
     for (auto const &extension : extensions) {
         std::string name(reinterpret_cast<char const *>(extension.extensionName));
 
@@ -132,24 +130,21 @@ ExtensionSet getDeviceExtensions(VulPhysicalDevicePtr const &device) {
     return exts;
 }
 
-std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VulPhysicalDevicePtr const &device,
-                                                       DriverConfig const &driverConfig, ExtensionSet const &instExts,
-                                                       ExtensionSet const &deviceExts) noexcept {
+std::tuple<ExtensionSet, ExtensionSet> pruneExtensions(VulPhysicalDevicePtr const &device, DriverConfig const &driverConfig,
+                                                       ExtensionSet const &instExts, ExtensionSet const &deviceExts) noexcept {
     ExtensionSet newInstExts   = instExts;
     ExtensionSet newDeviceExts = deviceExts;
 
 #if BVK_ENABLED(BVK_DEBUG_DEBUG_UTILS)
     // debugUtils 与 debugMarkers 扩展互斥
-    if (newInstExts.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) &&
-        newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    if (newInstExts.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME) && newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
 #endif
 
 #if BVK_ENABLED(BVK_DEBUG_VALIDATION)
     // debugMarker 必须同时请求 debugReport 实例扩展；检查是否存在
-    if (newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) &&
-        !newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    if (newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME) && !newInstExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
         newDeviceExts.erase(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
     }
 #endif
@@ -185,8 +180,8 @@ VkFormatList findAttachmentDepthStencilFormats(VulPhysicalDevicePtr const &devic
 
 VkFormatList findBlittableDepthStencilFormats(VulPhysicalDevicePtr const &device) {
     VkFormatList                   selectedFormats;
-    constexpr VkFormatFeatureFlags required = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                                              VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
+    constexpr VkFormatFeatureFlags required =
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;
 
     for (VkFormat const format : ALL_VK_FORMATS) {
         // 跳过需要扩展支持的格式
@@ -214,7 +209,7 @@ bool hasUnifiedMemoryArchitecture(VkPhysicalDeviceMemoryProperties memoryPropert
     return true;
 }
 
-}
+}  // namespace
 
 struct VulkanPlatformPrivate {
     VulInstancePtr       m_pInstance;
@@ -240,6 +235,14 @@ VkInstance VulkanPlatform::GetVkInstance() const noexcept { return m_pImpl->m_pI
 VkPhysicalDevice VulkanPlatform::GetVkPhysicalDevice() const noexcept { return m_pImpl->m_pPhysicalDevice->GetHandle(); }
 
 VkDevice VulkanPlatform::GetVkDevice() const noexcept { return m_pImpl->m_pDevice->GetHandle(); }
+
+uint32_t VulkanPlatform::GetGraphicsQueueFamilyIndex() const noexcept { return m_pImpl->m_graphicsQueueFamilyIndex; }
+
+uint32_t VulkanPlatform::GetGraphicsQueueIndex() const noexcept { return m_pImpl->m_graphicsQueueIndex; }
+
+VkQueue VulkanPlatform::GetVkGraphicsQueue() const noexcept {
+    return m_pImpl->m_pGraphicsQueue ? m_pImpl->m_pGraphicsQueue->GetHandle() : VK_NULL_HANDLE;
+}
 
 DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareContext) {
     initRuntime(shareContext);
@@ -275,8 +278,8 @@ void VulkanPlatform::initRuntime(void *shareContext) {
         // 共享的 instance / device 标记为共享，不负责销毁
         m_pImpl->m_pInstance       = new VulInstance(scontext->instance, true);
         m_pImpl->m_pPhysicalDevice = new VulPhysicalDevice(scontext->physicalDevice);
-        m_pImpl->m_pDevice = new VulLogicDevice(scontext->logicalDevice, true, scontext->graphicsQueueFamilyIndex,
-                                                scontext->graphicsQueueIndex, INVALID_VK_INDEX, INVALID_VK_INDEX);
+        m_pImpl->m_pDevice = new VulLogicDevice(scontext->logicalDevice, true, scontext->graphicsQueueFamilyIndex, scontext->graphicsQueueIndex,
+                                                INVALID_VK_INDEX, INVALID_VK_INDEX);
 
         m_pImpl->m_sharedContext = true;
     }
@@ -307,10 +310,8 @@ void VulkanPlatform::selectPhysicalDevice(void *shareContext) {
     LOG_ASSERT(!(hasGPUPreference && shareContext));
 
     if (!m_pImpl->m_pPhysicalDevice) {
-        m_pImpl->m_pPhysicalDevice = VulPhysicalDevice::Builder()
-                                         .SetInstance(m_pImpl->m_pInstance)
-                                         .SetGPUPreference(pref.deviceName, pref.index)
-                                         .Build();
+        m_pImpl->m_pPhysicalDevice =
+            VulPhysicalDevice::Builder().SetInstance(m_pImpl->m_pInstance).SetGPUPreference(pref.deviceName, pref.index).Build();
     }
     LOG_ASSERT(m_pImpl->m_pPhysicalDevice);
 
@@ -321,11 +322,10 @@ ExtensionSet VulkanPlatform::initDeviceExtensions(DriverConfig const &config, Ex
     ExtensionSet deviceExts;
     // 共享上下文时不假设任何扩展
     if (!m_pImpl->m_sharedContext) {
-        deviceExts = getDeviceExtensions(m_pImpl->m_pPhysicalDevice);
-        auto [prunedInstExts, prunedDeviceExts] =
-            pruneExtensions(m_pImpl->m_pPhysicalDevice, config, instExts, deviceExts);
-        instExts   = prunedInstExts;
-        deviceExts = prunedDeviceExts;
+        deviceExts                              = getDeviceExtensions(m_pImpl->m_pPhysicalDevice);
+        auto [prunedInstExts, prunedDeviceExts] = pruneExtensions(m_pImpl->m_pPhysicalDevice, config, instExts, deviceExts);
+        instExts                                = prunedInstExts;
+        deviceExts                              = prunedDeviceExts;
     }
     return deviceExts;
 }
@@ -345,8 +345,7 @@ void VulkanPlatform::createLogicalDevice(DriverConfig const &config, ExtensionSe
         }
 
         if (deviceExts.contains(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME)) {
-            requestedFeatures.imageView2Don3DImage =
-                context.m_portabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
+            requestedFeatures.imageView2Don3DImage = context.m_portabilitySubsetFeatures.imageView2DOn3DImage == VK_TRUE;
         }
 
         if (context.IsGlobalPrioritySupported()) {
@@ -427,8 +426,8 @@ VulkanPlatform::ExtensionSet VulkanPlatform::getInstanceExtensions(ExtensionSet 
     return exts;
 }
 
-void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts,
-                                               ExtensionSet const &deviceExts, void *sharedContext) noexcept {
+void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
+                                               void *sharedContext) noexcept {
     VulkanContext &context = *m_pImpl->m_pContext;
 
     VkPhysicalDeviceProtectedMemoryFeatures queryProtectedMemoryFeatures = {
@@ -463,15 +462,13 @@ void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
     if (vkGetPhysicalDeviceProperties2) {
         vkGetPhysicalDeviceProperties2(m_pImpl->m_pPhysicalDevice->GetHandle(), &context.m_physicalDeviceProperties);
     } else {
-        vkGetPhysicalDeviceProperties(m_pImpl->m_pPhysicalDevice->GetHandle(),
-                                      &context.m_physicalDeviceProperties.properties);
+        vkGetPhysicalDeviceProperties(m_pImpl->m_pPhysicalDevice->GetHandle(), &context.m_physicalDeviceProperties.properties);
     }
 
     if (vkGetPhysicalDeviceFeatures2) {
         vkGetPhysicalDeviceFeatures2(m_pImpl->m_pPhysicalDevice->GetHandle(), &context.m_physicalDeviceFeatures);
     } else {
-        vkGetPhysicalDeviceFeatures(m_pImpl->m_pPhysicalDevice->GetHandle(),
-                                    &context.m_physicalDeviceFeatures.features);
+        vkGetPhysicalDeviceFeatures(m_pImpl->m_pPhysicalDevice->GetHandle(), &context.m_physicalDeviceFeatures.features);
     }
 
     vkGetPhysicalDeviceMemoryProperties(m_pImpl->m_pPhysicalDevice->GetHandle(), &context.m_memoryProperties);
@@ -482,13 +479,11 @@ void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
         context.m_debugUtilsSupported       = scontext->debugUtilsSupported;
         context.m_debugMarkersSupported     = scontext->debugMarkersSupported;
     } else {
-        context.m_debugUtilsSupported   = instExts.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        context.m_debugMarkersSupported = deviceExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        context.m_pipelineCreationFeedbackSupported =
-            deviceExts.contains(VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
-        context.m_vertexInputDynamicStateSupported =
-            deviceExts.contains(VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
-        context.m_globalPrioritySupported = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
+        context.m_debugUtilsSupported               = instExts.contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        context.m_debugMarkersSupported             = deviceExts.contains(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        context.m_pipelineCreationFeedbackSupported = deviceExts.contains(VK_EXT_PIPELINE_CREATION_FEEDBACK_EXTENSION_NAME);
+        context.m_vertexInputDynamicStateSupported  = deviceExts.contains(VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
+        context.m_globalPrioritySupported           = globalPriorityFeatures.globalPriorityQuery == VK_TRUE;
     }
 
     // 传递驱动配置（特性标志）

@@ -43,6 +43,15 @@ enum class GpuContextPriority : uint8_t {
 };
 
 /**
+ * 围栏等待结果；数值与上游 Filament 保持一致
+ */
+enum class FenceStatus : int8_t {
+    Error              = -1,  //!< 发生错误或等待被取消，条件未满足
+    ConditionSatisfied = 0,   //!< 围栏条件已满足
+    TimeoutExpired     = 1,   //!< 等待超时，条件未满足
+};
+
+/**
  * 缓冲区使用方式；STATIC/DYNAMIC 为 legacy 位置值，DYNAMIC_BIT/SHARED_WRITE_BIT 为位标志（历史兼容混用）
  */
 enum class BufferUsage : uint8_t {
