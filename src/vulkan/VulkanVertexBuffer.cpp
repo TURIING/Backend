@@ -1,7 +1,7 @@
-#include "VulkanHandle.h"
-
 #include <cstdint>
 #include <utility>
+
+#include "VulkanHandle.h"
 
 BEGIN_NS_BACKEND
 
@@ -22,7 +22,7 @@ void VulkanVertexBuffer::SetBuffer(const VulkanBufferObjectPtr& bufferObject, ui
             m_attributes.set(attribIndex);
         }
     }
-    m_resources.push_back(std::move(bufferObject));
+    m_resources.push_back(bufferObject);
 }
 
 END_NS_BACKEND
