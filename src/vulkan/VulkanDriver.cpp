@@ -12,9 +12,14 @@
 #include "vulkan/buffer/VulkanBuffer.h"
 #include "vulkan/resource/ResourceManager.h"
 
+#include <algorithm>
+
 BEGIN_NS_BACKEND
 
 namespace {
+
+// 句柄 arena 取上游默认值 8MB；0（未配置）会得到空 arena 并在 HandleAllocator 初始化时越界断言
+constexpr size_t kMinHandleArenaSize = 8u * 1024u * 1024u;
 
 VmaAllocator CreateAllocator(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device) noexcept {
     VmaVulkanFunctions const vulkanFunctions{
@@ -50,7 +55,9 @@ VulkanDriver::VulkanDriver(const VulkanPlatformPtr &platform, const VulkanContex
 VulkanDriver::~VulkanDriver() noexcept { DestroyResources(); }
 
 DriverPtr VulkanDriver::Create(VulkanPlatform *platform, const VulkanContextPtr &context, const DriverConfig &config) {
-    return DriverPtr(new VulkanDriver(VulkanPlatformPtr(platform), context, config));
+    DriverConfig validConfig = config;
+    validConfig.handleArenaSize = std::max(config.handleArenaSize, kMinHandleArenaSize);
+    return DriverPtr(new VulkanDriver(VulkanPlatformPtr(platform), context, validConfig));
 }
 
 Dispatcher VulkanDriver::GetDispatcher() const noexcept { return ConcreteDispatcher<VulkanDriver>::Make(); }
@@ -58,8 +65,16 @@ Dispatcher VulkanDriver::GetDispatcher() const noexcept { return ConcreteDispatc
 void VulkanDriver::DestroyResources() noexcept {
     m_resMgr->Terminate();
 
-    m_bufferCache.Reset();
-    m_stagePool.Reset();
+    // terminate() 与析构都会走到这里：每一步都判空，保证重复调用安全
+    // 池内 VkBuffer 须先经 Terminate 归还 VMA：析构顺序错会让 allocator 带着存活分配被销毁
+    if (m_bufferCache) {
+        m_bufferCache->Terminate();
+        m_bufferCache.Reset();
+    }
+    if (m_stagePool) {
+        m_stagePool->Terminate();
+        m_stagePool.Reset();
+    }
 
     if (m_allocator != VK_NULL_HANDLE) {
         vmaDestroyAllocator(m_allocator);
