@@ -1,9 +1,29 @@
 #pragma once
 
 #include "Backend/DriverDefine.h"
+#include "Backend/platform/VulkanPlatform.h"
+
 #include "VkDef.h"
 
+#include <vector>
+
 BEGIN_NS_BACKEND
+
+struct VulkanCommandBuffer;
+struct VulkanRenderPass;
+struct VulkanRenderTarget;
+
+DECLARE_SHARE_PTR_CLASS(VulkanRenderPass);
+DECLARE_SHARE_PTR_CLASS(VulkanRenderTarget);
+
+// 一次渲染通道的进行态：开始与结束之间缓存命令缓冲，并持有该通道的目标与通道对象
+struct VulkanRenderPassContext {
+    VulkanCommandBuffer  *commandBuffer = nullptr;
+    VulkanRenderTargetPtr renderTarget{};
+    VulkanRenderPassPtr   renderPass{};
+    RenderPassParams      params         = {};
+    int                   currentSubpass = 0;
+};
 
 // 设备/实例上下文的不变数据集合（实际句柄存储于 VulkanPlatform）。
 class VulkanContext : public NS_UTILS::Ref {
@@ -79,6 +99,20 @@ public:
 
     inline bool IsStagingBufferBypassEnabled() const noexcept { return m_stagingBufferBypassEnabled; }
 
+    // 并行管线预编译：开启后 VulkanPipelineCache 会启动编译线程池
+    inline bool IsPipelineCachePrewarmingEnabled() const noexcept { return m_asyncPipelineCachePrewarmingEnabled; }
+
+    inline bool IsDepthClampSupported() const noexcept { return m_depthClampSupported; }
+
+    inline bool IsClipDistanceSupported() const noexcept { return m_clipDistanceSupported; }
+
+    inline bool IsImageCubeArraySupported() const noexcept { return m_imageCubeArraySupported; }
+
+    // 为外部 YCbCr 格式做管线缓存预热时使用的格式清单
+    inline std::vector<VulkanPlatform::ExternalYcbcrFormat> const& GetPipelineCachePrewarmExternalFormats() const noexcept {
+        return m_pipelineCachePrewarmExternalFormats;
+    }
+
 private:
     VkPhysicalDeviceMemoryProperties m_memoryProperties         = {};
     VkPhysicalDeviceProperties2      m_physicalDeviceProperties = {
@@ -114,6 +148,9 @@ private:
     bool m_vertexInputDynamicStateSupported  = false;
     bool m_globalPrioritySupported           = false;
     bool m_driverPropertiesSupported         = false;
+    bool m_depthClampSupported               = false;
+    bool m_clipDistanceSupported             = false;
+    bool m_imageCubeArraySupported           = false;
 
     // 应用层可开关的选项
     bool m_asyncPipelineCachePrewarmingEnabled = false;
@@ -122,6 +159,8 @@ private:
 
     VkFormatList m_depthStencilFormats;
     VkFormatList m_blittableDepthStencilFormats;
+
+    std::vector<VulkanPlatform::ExternalYcbcrFormat> m_pipelineCachePrewarmExternalFormats;
 
     friend class VulkanPlatform;
 };
