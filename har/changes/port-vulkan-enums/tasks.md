@@ -6,7 +6,7 @@
 - [x] 1.2 `include/Utils/math/Matrix.h`：定义 `math::mat3f`（3×3 float POD，默认构造为单位矩阵 + 逐元素构造）
 - [x] 1.3 `tests/`：为 7 个类型补单元测试（覆盖 `backend-math` spec 的各 Scenario）
 - [x] 1.4 构建 `3rd/Utils` 并跑 `bin/UtilsTests`，全绿
-- [ ] 1.5 在 `3rd/Utils` 仓库内单独提交 —— **推迟**：用户决策「全部写完再提交」（7 个变更完成后统一提交）
+- [x] 1.5 在 `3rd/Utils` 仓库内单独提交 —— 已完成（随变更 1 的设施提交一并落地）
 
 ## 2. DriverDefine.h 渲染通道族
 

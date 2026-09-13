@@ -10,7 +10,7 @@
 - [x] 1.6 `include/Utils/RangeMap.h`：`NS_UTILS::RangeMap<KeyType, ValueType>`——`std::map<KeyType, std::pair<Range<KeyType>, ValueType>>` 存储 + `Add` / `Set` / `Has` / `Get`（无覆盖时 `FILAMENT_CHECK_PRECONDITION` 中止，**不返回默认值**）/ `Clear(first, last)` / `Reset(key)` / `RangeCount()`；私有 `Insert` / `Wipe` / `MergeRight` / `MergeLeft` / `Shrink` / `FindRange`
 - [x] 1.7 `tests/`：为 `Bitset` / `Range` / `RangeMap` / `hash::MurmurHashFn` 补单元测试（覆盖各 spec 的 Scenario，含「相邻同值区间自动合并」「覆盖写入分裂既有区间」「`Clear` 裁剪边界」「无覆盖时中止」四条 RangeMap 语义）
 - [x] 1.8 构建 `3rd/Utils` 并跑 `bin/UtilsTests`，全绿
-- [ ] 1.9 在 `3rd/Utils` 仓库内单独提交（commit message 用中文、遵循 Conventional Commits、禁止出现"移植"字样）
+- [x] 1.9 在 `3rd/Utils` 仓库内单独提交 —— 已完成：2 个提交（设施与测试分开）
 
 ## 2. 后端异步底座骨架
 
