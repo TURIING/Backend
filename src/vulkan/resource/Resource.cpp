@@ -48,6 +48,16 @@ ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept {
 }
 
 template <>
+ResourceType Resource::GetTypeEnum<VulkanBufferObject>() noexcept {
+    return ResourceType::BufferObject;
+}
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanIndexBuffer>() noexcept {
+    return ResourceType::IndexBuffer;
+}
+
+template <>
 ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept {
     return ResourceType::VertexBufferInfo;
 }

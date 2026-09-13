@@ -127,6 +127,22 @@ void VulkanDriver::DestroyBufferObject(BufferObjectHandle boh) {
     m_resMgr->Destroy(bo);
 }
 
+Handle<HwIndexBuffer> VulkanDriver::CreateIndexBufferS() noexcept { return m_resMgr->AllocHandle<VulkanIndexBuffer>(); }
+void VulkanDriver::CreateIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType, uint32_t indexCount, BufferUsage,
+                                      NS_UTILS::ImmutableString &&tag) {
+    auto const elementSize = static_cast<uint8_t>(Driver::GetElementTypeSize(elementType));
+    auto       ib          = m_resMgr->Make<VulkanIndexBuffer>(ibh, m_context, m_allocator, m_bufferCache, elementSize, indexCount);
+    m_resMgr->AssociateTagToHandle(ibh.GetId(), std::move(tag));
+}
+
+void VulkanDriver::DestroyIndexBuffer(IndexBufferHandle ibh) {
+    if (!ibh) {
+        return;
+    }
+    auto ib = m_resMgr->Acquire<VulkanIndexBuffer>(ibh);
+    m_resMgr->Destroy(ib);
+}
+
 void VulkanDriver::SetVertexBufferObject(VertexBufferHandle vbh, uint32_t index, BufferObjectHandle boh) {
     auto vb = m_resMgr->Acquire<VulkanVertexBuffer>(vbh);
     auto bo = m_resMgr->Acquire<VulkanBufferObject>(boh);

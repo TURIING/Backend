@@ -123,4 +123,10 @@ VulkanBufferObject::VulkanBufferObject(const VulkanContextPtr& context, VmaAlloc
 
 void VulkanBufferObject::LoadFromCpu(VulkanCommandBuffer& commands, void const* cpuData, uint32_t byteOffset, uint32_t numBytes) {}
 
+VulkanIndexBuffer::VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache,
+                                     uint8_t elementSize, uint32_t indexCount)
+    : HwIndexBuffer(elementSize, indexCount, false),
+      indexType(elementSize == sizeof(uint16_t) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32),
+      m_buffer(context, allocator, bufferCache, VulkanBufferBinding::Index, BufferUsage::STATIC, static_cast<uint32_t>(elementSize) * indexCount) {}
+
 END_NS_BACKEND

@@ -28,15 +28,19 @@ public:
     }
 
     // 前置条件：handle 已由 AllocHandle 分配
+    // 句柄背书的资源：构造后由句柄持有一份引用，客户端句柄存活期间对象不被回收，返回的 SharedPtr 仅为借用视图
     template <typename D, typename B, typename... ARGS>
     NODISCARD NS_UTILS::SharedPtr<D> Make(Handle<B> const& handle, ARGS&&... args) {
         D* obj = construct<D, B>(handle, std::forward<ARGS>(args)...);
+        obj->AddRef();
         return NS_UTILS::SharedPtr<D>(obj);
     }
 
+    // 内部资源：所有权唯一归返回的 SharedPtr，不额外持有句柄引用
     template <typename D, typename... ARGS>
     NODISCARD NS_UTILS::SharedPtr<D> AllocateAndConstruct(ARGS&&... args) {
-        return Make<D, D>(AllocHandle<D>(), std::forward<ARGS>(args)...);
+        D* obj = construct<D, D>(AllocHandle<D>(), std::forward<ARGS>(args)...);
+        return NS_UTILS::SharedPtr<D>(obj);
     }
 
     // handle → 对象唯一转换通道，已销毁句柄在此拦截
@@ -52,7 +56,7 @@ public:
         return NS_UTILS::SharedPtr<D>(obj);
     }
 
-    // driver 销毁入口：防重复销毁，置标记后释放引用
+    // driver 销毁入口：配 Make 使用，释放句柄持有的引用；防重复销毁
     template <typename D>
     void Destroy(NS_UTILS::SharedPtr<D>& ptr) {
         // 用 operator bool 判空：SharedPtr 无 operator==，比较 nullptr 会经 Ref/Resource 转换产生二义
@@ -65,6 +69,9 @@ public:
         }
         obj->setDestroyed();
         ptr.Reset();
+        // 借用视图已释放：归零则说明调用方对内部资源误用了 Destroy
+        LOG_ASSERT(obj->GetRefCount() >= 1);
+        obj->SubRef();
     }
 
     void AssociateTagToHandle(HandleBase::HandleId id, NS_UTILS::ImmutableString&& tag) noexcept;

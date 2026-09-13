@@ -12,6 +12,8 @@ BEGIN_NS_BACKEND
 
 class ResourceManager;
 class VulkanBuffer;
+struct VulkanBufferObject;
+struct VulkanIndexBuffer;
 struct VulkanSemaphore;
 struct VulkanVertexBufferInfo;
 struct VulkanVertexBuffer;
@@ -89,6 +91,12 @@ DECLARE_SHARE_PTR_CLASS(Resource);
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanBuffer>() noexcept;
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanBufferObject>() noexcept;
+
+template <>
+ResourceType Resource::GetTypeEnum<VulkanIndexBuffer>() noexcept;
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanVertexBufferInfo>() noexcept;

@@ -104,6 +104,14 @@ void Engine::DestroyFence(Backend::FenceHandle fh) {
     m_stream->destroyFence(fh);
 }
 
+Backend::IndexBufferHandle Engine::CreateIndexBuffer(Backend::ElementType type, uint32_t indexCount, Backend::BufferUsage usage) {
+    return m_stream->CreateIndexBuffer(type, indexCount, usage);
+}
+
+void Engine::DestroyIndexBuffer(Backend::IndexBufferHandle ibh) {
+    m_stream->DestroyIndexBuffer(ibh);
+}
+
 void Engine::ResetState() {
     m_stream->resetState();
 }

@@ -44,11 +44,20 @@ void ResourceManager::Terminate() noexcept {
 
 void ResourceManager::destroyWithType(ResourceType type, HandleBase::HandleId id) {
     switch (type) {
-        case ResourceType::VulkanBuffer:
-            destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
+        case ResourceType::BufferObject:
+            destruct<VulkanBufferObject>(Handle<VulkanBufferObject>(id));
+            break;
+        case ResourceType::IndexBuffer:
+            destruct<VulkanIndexBuffer>(Handle<VulkanIndexBuffer>(id));
+            break;
+        case ResourceType::VertexBuffer:
+            destruct<VulkanVertexBuffer>(Handle<VulkanVertexBuffer>(id));
             break;
         case ResourceType::VertexBufferInfo:
             destruct<VulkanVertexBufferInfo>(Handle<VulkanVertexBufferInfo>(id));
+            break;
+        case ResourceType::VulkanBuffer:
+            destruct<VulkanBuffer>(Handle<VulkanBuffer>(id));
             break;
         case ResourceType::StageSegment:
             destruct<VulkanStageBuffer::Segment>(Handle<VulkanStageBuffer::Segment>(id));

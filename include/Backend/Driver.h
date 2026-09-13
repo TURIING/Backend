@@ -20,6 +20,8 @@ public:
     // 命令批执行钩子，默认直接执行；驱动可借此包装（如 GPU 上下文切换）
     virtual void Execute(std::function<void()> const& fn) { fn(); }
 
+    NODISCARD static size_t GetElementTypeSize(ElementType type) noexcept;
+
 #undef DECL_DRIVER_API
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     void methodName(paramsDecl) {}

@@ -94,7 +94,11 @@ DECL_DRIVER_API_TAGGED_R_N(VertexBufferHandle, CreateVertexBuffer, uint32_t, ver
 
 DECL_DRIVER_API_TAGGED_R_N(BufferObjectHandle, CreateBufferObject, uint32_t, byteCount, BufferObjectBinding, bindingType, BufferUsage, usage)
 
+DECL_DRIVER_API_TAGGED_R_N(IndexBufferHandle, CreateIndexBuffer, ElementType, elementType, uint32_t, indexCount, BufferUsage, usage)
+
 DECL_DRIVER_API_N(DestroyBufferObject, BufferObjectHandle, boh)
+
+DECL_DRIVER_API_N(DestroyIndexBuffer, IndexBufferHandle, ibh)
 
 DECL_DRIVER_API_N(SetVertexBufferObject, VertexBufferHandle, vbh, uint32_t, index, BufferObjectHandle, boh)
 

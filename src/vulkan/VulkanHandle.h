@@ -84,6 +84,19 @@ private:
 };
 DECLARE_SHARE_PTR_CLASS(VulkanBufferObject);
 
+struct VulkanIndexBuffer : public HwIndexBuffer, public Resource {
+    VulkanIndexBuffer(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanBufferCachePtr& bufferCache, uint8_t elementSize,
+                      uint32_t indexCount);
+
+    NODISCARD VkBuffer GetVkBuffer() const noexcept { return m_buffer.GetVkBuffer(); }
+
+    VkIndexType const indexType;
+
+private:
+    VulkanBufferProxy m_buffer;
+};
+DECLARE_SHARE_PTR_CLASS(VulkanIndexBuffer);
+
 struct VulkanVertexBuffer : public HwVertexBuffer, public Resource {
     VulkanVertexBuffer(const VulkanContextPtr& context, const VulkanBufferCachePtr& bufferCache, uint32_t vertexCount,
                        VulkanVertexBufferInfoPtr vbi);

@@ -38,9 +38,11 @@ public:
     void                 Finish();
     Backend::FenceHandle CreateFence();
     void                 DestroyFence(Backend::FenceHandle fh);
-    void                 ResetState();
-    void                 Terminate();
-    void                 QueueCommand(std::function<void()> command);
+    Backend::IndexBufferHandle CreateIndexBuffer(Backend::ElementType type, uint32_t indexCount, Backend::BufferUsage usage);
+    void                       DestroyIndexBuffer(Backend::IndexBufferHandle ibh);
+    void                       ResetState();
+    void                       Terminate();
+    void                       QueueCommand(std::function<void()> command);
 
 private:
     Engine(Backend::BackendType type, Backend::DriverConfig config, size_t requiredSize, size_t bufferSize);

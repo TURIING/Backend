@@ -38,4 +38,21 @@ struct HwBufferObject : public HwBase {
     HwBufferObject(uint32_t byteCount, bool async) noexcept : byteCount(byteCount), asynchronous(async) {}
 };
 
+constexpr uint32_t kIndexCountBits  = 26;
+constexpr uint32_t kElementSizeBits = 5;
+constexpr uint8_t  kMaxElementSize  = 16;
+
+struct HwIndexBuffer : public HwBase {
+    uint32_t count : kIndexCountBits;
+    uint32_t elementSize : kElementSizeBits;
+    uint32_t asynchronous : 1;
+
+    HwIndexBuffer() noexcept : count{}, elementSize{}, asynchronous{} {}
+    HwIndexBuffer(uint8_t elementSize, uint32_t indexCount, bool async) noexcept
+        : count(indexCount), elementSize(elementSize), asynchronous(async) {
+        LOG_ASSERT(elementSize > 0 && elementSize <= kMaxElementSize);
+        LOG_ASSERT(indexCount < (1u << kIndexCountBits));
+    }
+};
+
 END_NS_BACKEND
