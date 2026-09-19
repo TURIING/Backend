@@ -11,8 +11,7 @@ VulkanCommands::VulkanCommands(const VulkanPlatformPtr &platform, const VulkanCo
     : m_device(platform->GetVkDevice()),
       m_context(context),
       m_semaphoreManager(semaphoreManager),
-      m_pool(std::make_unique<VulkanCommandBufferPool>(context, platform->GetVkDevice(), platform->GetVkGraphicsQueue(),
-                                                       platform->GetGraphicsQueueFamilyIndex(), semaphoreManager)) {}
+      m_pool(std::make_unique<VulkanCommandBufferPool>(platform, context, semaphoreManager)) {}
 
 void VulkanCommands::Terminate() {
     m_pool.reset();

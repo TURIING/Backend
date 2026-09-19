@@ -6,19 +6,20 @@
 
 BEGIN_NS_BACKEND
 
-VulkanCommandBufferPool::VulkanCommandBufferPool(const VulkanContextPtr &context, VkDevice device, VkQueue queue, uint8_t queueFamilyIndex,
+VulkanCommandBufferPool::VulkanCommandBufferPool(const VulkanPlatformPtr &platform, const VulkanContextPtr &context,
                                                  const VulkanSemaphoreManagerPtr &semaphoreManager)
-    : m_device(device), m_recording(kInvalid), m_fencePool(context, device, kCapacity) {
+    : m_device(platform->GetVkDevice()), m_recording(kInvalid), m_fencePool(context, platform->GetVkDevice(), kCapacity) {
     VkCommandPoolCreateInfo const createInfo{
         .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-        .queueFamilyIndex = queueFamilyIndex,
+        .queueFamilyIndex = platform->GetGraphicsQueueFamilyIndex(),
     };
-    vkCreateCommandPool(device, &createInfo, kVkAlloc, &m_pool);
+    vkCreateCommandPool(m_device, &createInfo, kVkAlloc, &m_pool);
 
     m_buffers.reserve(kCapacity);
     for (int i = 0; i < kCapacity; ++i) {
-        m_buffers.emplace_back(std::make_unique<VulkanCommandBuffer>(context, m_fencePool, device, queue, m_pool, semaphoreManager));
+        m_buffers.emplace_back(std::make_unique<VulkanCommandBuffer>(context, m_fencePool, m_device, platform->GetVkGraphicsQueue(), m_pool,
+                                                                    semaphoreManager));
     }
 }
 

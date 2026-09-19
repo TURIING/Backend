@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Backend/DriverDefine.h"
+#include "Backend/platform/VulkanPlatform.h"
 
 #include "Utils/Utils.h"
 
@@ -26,7 +27,7 @@ public:
     using ActiveBuffers              = std::bitset<kMaxCommandBuffers>;
     static constexpr int8_t kInvalid = -1;
 
-    VulkanCommandBufferPool(const VulkanContextPtr &context, VkDevice device, VkQueue queue, uint8_t queueFamilyIndex,
+    VulkanCommandBufferPool(const VulkanPlatformPtr &platform, const VulkanContextPtr &context,
                             const VulkanSemaphoreManagerPtr &semaphoreManager);
     ~VulkanCommandBufferPool();
 
