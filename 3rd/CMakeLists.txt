@@ -1,9 +1,13 @@
-include(volk.cmake)
+include(glfw.cmake)
 include(vma.cmake)
+include(volk.cmake)
+
 add_subdirectory(Utils)
+
 set(THIRD_PARTY_LIBS
     Utils
-    ${VOLK_TARGET_NAME}
+    ${GLFW_TARGET_NAME}
     ${VMA_TARGET_NAME}
+    ${VOLK_TARGET_NAME}
     CACHE INTERNAL "Third-party library targets"
 )

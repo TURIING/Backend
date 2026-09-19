@@ -5,6 +5,9 @@ set(BACKEND_NAME Backend)
 
 project(${BACKEND_NAME} VERSION 0.1.0 LANGUAGES CXX)
 
+# GlfwWindow.mm 是 Objective-C++；须在顶层启用，子目录里 enable_language 不会完成编译器探测
+enable_language(OBJCXX)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -17,8 +20,10 @@ set(BACKEND_DEBUG_FLAG 3)
 set(BACKEND_MACRO_DEFINE "$<$<CONFIG:Debug>:BACKEND_DEBUG_FLAG=${BACKEND_DEBUG_FLAG}>")
 
 enable_testing()
-add_subdirectory(tests)
+
+# 第三方库先引入：tests 需要引用其中定义的目标名（如 ${GLFW_TARGET_NAME}）
 add_subdirectory(3rd)
+add_subdirectory(tests)
 
 file(GLOB_RECURSE BACKEND_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${BACKEND_NAME} STATIC ${BACKEND_SOURCES})
