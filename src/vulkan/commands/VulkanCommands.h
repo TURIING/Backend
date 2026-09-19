@@ -73,7 +73,7 @@ private:
     VulkanContextPtr          m_context;
     VulkanSemaphoreManagerPtr m_semaphoreManager;
 
-    std::unique_ptr<VulkanCommandBufferPool> m_pool;
+    VulkanCommandBufferPoolPtr m_pool;
 
     VkSemaphore m_injectedDependency = VK_NULL_HANDLE;
 

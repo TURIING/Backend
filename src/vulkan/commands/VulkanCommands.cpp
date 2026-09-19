@@ -11,10 +11,10 @@ VulkanCommands::VulkanCommands(const VulkanPlatformPtr &platform, const VulkanCo
     : m_device(platform->GetVkDevice()),
       m_context(context),
       m_semaphoreManager(semaphoreManager),
-      m_pool(std::make_unique<VulkanCommandBufferPool>(platform, context, semaphoreManager)) {}
+      m_pool(NS_UTILS::MakeShared<VulkanCommandBufferPool>(platform, context, semaphoreManager)) {}
 
 void VulkanCommands::Terminate() {
-    m_pool.reset();
+    m_pool.Reset();
     m_lastSubmit.Reset();
     m_lastFenceStatus.reset();
 }

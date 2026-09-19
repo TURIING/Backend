@@ -22,14 +22,14 @@
 BEGIN_NS_BACKEND
 
 // 一组命令缓冲 + 其围栏池：调用方只需 GetRecording/Flush，不必关心槽位轮转
-class VulkanCommandBufferPool {
+class VulkanCommandBufferPool : public NS_UTILS::Ref {
 public:
     using ActiveBuffers              = std::bitset<kMaxCommandBuffers>;
     static constexpr int8_t kInvalid = -1;
 
     VulkanCommandBufferPool(const VulkanPlatformPtr &platform, const VulkanContextPtr &context,
                             const VulkanSemaphoreManagerPtr &semaphoreManager);
-    ~VulkanCommandBufferPool();
+    ~VulkanCommandBufferPool() override;
 
     VulkanCommandBufferPool(const VulkanCommandBufferPool &)            = delete;
     VulkanCommandBufferPool &operator=(const VulkanCommandBufferPool &) = delete;
@@ -67,5 +67,7 @@ private:
     std::unique_ptr<VulkanGroupMarkers> m_groupMarkers;
 #endif
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanCommandBufferPool);
 
 END_NS_BACKEND
