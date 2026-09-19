@@ -77,8 +77,8 @@ bool VerifyHeadlessSwapChain(const EnginePtr &engine) {
     // 空句柄调用须退化为 no-op 而不是崩溃
     Backend::VulkanPlatform::ImageSyncData syncData;
     bool const                             nullHandleSafe = platform->Acquire(nullptr, &syncData) == VK_ERROR_UNKNOWN &&
-                                platform->Present(nullptr, 0, VK_NULL_HANDLE) == VK_ERROR_UNKNOWN && !platform->HasResized(nullptr) &&
-                                !platform->IsProtected(nullptr);
+                                platform->Present(nullptr, 0, VK_NULL_HANDLE) == VK_ERROR_UNKNOWN &&
+                                !platform->HasResized(nullptr) && !platform->IsProtected(nullptr);
     platform->Destroy(nullptr);
     if (!nullHandleSafe) {
         LOG_ERROR("headless swapchain: null handle is not handled defensively");
@@ -101,12 +101,13 @@ bool VerifyHeadlessSwapChain(const EnginePtr &engine) {
     }
 
     auto const bundle = platform->GetSwapChainBundle(swapChain);
-    LOG_INFO("headless swapchain: extent={}x{}, colorFormat={}, imageCount={}, depthFormat={}, protected={}", bundle.extent.width,
-             bundle.extent.height, static_cast<int>(bundle.colorFormat), bundle.colors.size(), static_cast<int>(bundle.depthFormat),
-             bundle.isProtected);
+    LOG_INFO("headless swapchain: extent={}x{}, colorFormat={}, imageCount={}, depthFormat={}, protected={}",
+             bundle.extent.width, bundle.extent.height, static_cast<int>(bundle.colorFormat), bundle.colors.size(),
+             static_cast<int>(bundle.depthFormat), bundle.isProtected);
 
     bool const bundleValid = bundle.extent.width == kSwapChainWidth && bundle.extent.height == kSwapChainHeight &&
-                             bundle.colorFormat != VK_FORMAT_UNDEFINED && bundle.colors.size() >= 2 && bundle.depth != VK_NULL_HANDLE;
+                             bundle.colorFormat != VK_FORMAT_UNDEFINED && bundle.colors.size() >= 2 &&
+                             bundle.depth != VK_NULL_HANDLE;
 
     // 销毁应释放全部图像与内存，不留 VMA / Vulkan 对象
     platform->Destroy(swapChain);
@@ -149,9 +150,11 @@ uint32_t SelectTestMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeBits
 }
 
 // 同尺寸二次获取命中复用、不同尺寸不复用、归还后可复用
-bool VerifyStageImageReuse(const Backend::VulkanStagePoolPtr &stagePool, const Backend::ResourceManagerPtr &resourceManager) {
+bool VerifyStageImageReuse(const Backend::VulkanStagePoolPtr &stagePool,
+                           const Backend::ResourceManagerPtr &resourceManager) {
     auto const acquire = [&stagePool](uint32_t width, uint32_t height) {
-        return stagePool->AcquireStageImage(Backend::PixelDataFormat::RGBA, Backend::PixelDataType::UBYTE, width, height);
+        return stagePool->AcquireStageImage(Backend::PixelDataFormat::RGBA, Backend::PixelDataType::UBYTE, width,
+                                            height);
     };
 
     Backend::VulkanStageImage::ResourcePtr first  = acquire(kStageWidth, kStageHeight);
@@ -186,8 +189,9 @@ bool VerifyStageImageReuse(const Backend::VulkanStagePoolPtr &stagePool, const B
 }
 
 // 以手工创建的 VkImage 走「包装已有 VkImage」分支，并校验布局跟踪与附件转发
-bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Backend::VulkanContextPtr &context, VmaAllocator allocator,
-                          const Backend::ResourceManagerPtr &resourceManager, const Backend::VulkanStagePoolPtr &stagePool) {
+bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Backend::VulkanContextPtr &context,
+                          VmaAllocator allocator, const Backend::ResourceManagerPtr &resourceManager,
+                          const Backend::VulkanStagePoolPtr &stagePool) {
     VkDevice const         device         = platform->GetVkDevice();
     VkPhysicalDevice const physicalDevice = platform->GetVkPhysicalDevice();
 
@@ -212,7 +216,8 @@ bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Back
     VkMemoryRequirements requirements{};
     vkGetImageMemoryRequirements(device, image, &requirements);
 
-    uint32_t const memoryTypeIndex = SelectTestMemoryType(physicalDevice, requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    uint32_t const memoryTypeIndex =
+        SelectTestMemoryType(physicalDevice, requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (memoryTypeIndex >= VK_MAX_MEMORY_TYPES) {
         LOG_ERROR("wrapped texture: no suitable memory type");
         vkDestroyImage(device, image, nullptr);
@@ -226,7 +231,8 @@ bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Back
     };
 
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    if (vkAllocateMemory(device, &allocateInfo, nullptr, &memory) != VK_SUCCESS || vkBindImageMemory(device, image, memory, 0) != VK_SUCCESS) {
+    if (vkAllocateMemory(device, &allocateInfo, nullptr, &memory) != VK_SUCCESS ||
+        vkBindImageMemory(device, image, memory, 0) != VK_SUCCESS) {
         LOG_ERROR("wrapped texture: image memory allocation or binding failed");
         vkDestroyImage(device, image, nullptr);
         return false;
@@ -236,11 +242,14 @@ bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Back
 
     Backend::Handle<Backend::VulkanTexture> const handle  = resourceManager->AllocHandle<Backend::VulkanTexture>();
     Backend::VulkanTexturePtr                     texture = resourceManager->Make<Backend::VulkanTexture>(
-        handle, context, device, allocator, resourceManager, nullptr /* commands */, image, memory, kTestFormat, VK_NULL_HANDLE /* ycbcrConversion */,
-        1 /* samples */, kTestWidth, kTestHeight, 1 /* depth */, usage, stagePool);
+        handle, context, device, allocator, resourceManager, nullptr /* commands */, image, memory, kTestFormat,
+        VK_NULL_HANDLE /* ycbcrConversion */, 1 /* samples */, kTestWidth, kTestHeight, 1 /* depth */, usage,
+        stagePool);
 
-    bool const identityValid = texture->GetImage() == image && texture->GetFormat() == kTestFormat && texture->GetExtent2D().width == kTestWidth &&
-                               texture->GetExtent2D().height == kTestHeight && texture->GetLayout(0, 0) == Backend::VulkanLayout::UNDEFINED;
+    bool const identityValid = texture->GetImage() == image && texture->GetFormat() == kTestFormat &&
+                               texture->GetExtent2D().width == kTestWidth &&
+                               texture->GetExtent2D().height == kTestHeight &&
+                               texture->GetLayout(0, 0) == Backend::VulkanLayout::UNDEFINED;
 
     VkImageSubresourceRange const range{
         .aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -252,20 +261,22 @@ bool VerifyWrappedTexture(const Backend::VulkanPlatformPtr &platform, const Back
     texture->SetLayout(range, Backend::VulkanLayout::FRAG_READ);
 
     // 未涉及的 mip 层级须保持 UNDEFINED
-    bool const layoutTracked =
-        texture->GetLayout(0, 0) == Backend::VulkanLayout::FRAG_READ && texture->GetLayout(0, 1) == Backend::VulkanLayout::UNDEFINED;
+    bool const layoutTracked = texture->GetLayout(0, 0) == Backend::VulkanLayout::FRAG_READ &&
+                               texture->GetLayout(0, 1) == Backend::VulkanLayout::UNDEFINED;
 
     Backend::VulkanAttachment attachment{ texture };
-    bool const                attachmentValid = attachment.GetImage() == image && attachment.GetFormat() == kTestFormat &&
+    bool const attachmentValid = attachment.GetImage() == image && attachment.GetFormat() == kTestFormat &&
                                  attachment.GetExtent2D().width == kTestWidth && !attachment.IsDepth() &&
-                                 attachment.GetLayout() == Backend::VulkanLayout::FRAG_READ && attachment.GetSubresourceRange().levelCount == 1;
+                                 attachment.GetLayout() == Backend::VulkanLayout::FRAG_READ &&
+                                 attachment.GetSubresourceRange().levelCount == 1;
 
     resourceManager->Destroy(texture);
     // 纹理与其共享状态各占一轮 GC：后者析构时才释放 VkImage 与 VkDeviceMemory
     resourceManager->Terminate();
 
     if (!identityValid || !layoutTracked || !attachmentValid) {
-        LOG_ERROR("wrapped texture: identity={}, layout={}, attachment={}", identityValid, layoutTracked, attachmentValid);
+        LOG_ERROR("wrapped texture: identity={}, layout={}, attachment={}", identityValid, layoutTracked,
+                  attachmentValid);
         return false;
     }
     LOG_INFO("wrapped texture: identity / layout tracking / attachment forwarding all verified");
@@ -282,11 +293,12 @@ bool VerifySamplerCache(VkDevice device) {
     bool const                                sameParamsHit = first != VK_NULL_HANDLE && first == second;
 
     VkSamplerYcbcrConversionCreateInfo const conversionInfo{
-        .sType      = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
-        .format     = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM,
-        .ycbcrModel = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601,
-        .ycbcrRange = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
-        .components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY },
+        .sType         = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+        .format        = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM,
+        .ycbcrModel    = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_601,
+        .ycbcrRange    = VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
+        .components    = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                           VK_COMPONENT_SWIZZLE_IDENTITY },
         .xChromaOffset = VK_CHROMA_LOCATION_MIDPOINT,
         .yChromaOffset = VK_CHROMA_LOCATION_MIDPOINT,
         .chromaFilter  = VK_FILTER_LINEAR,
@@ -314,7 +326,8 @@ bool VerifySamplerCache(VkDevice device) {
     }
 
     if (!sameParamsHit || !conversionHit) {
-        LOG_ERROR("sampler cache: sameParamsHit={}, distinctChecked={}, conversionDistinct={}", sameParamsHit, distinctChecked, conversionHit);
+        LOG_ERROR("sampler cache: sameParamsHit={}, distinctChecked={}, conversionDistinct={}", sameParamsHit,
+                  distinctChecked, conversionHit);
         return false;
     }
     LOG_INFO("sampler cache: same-params hit verified, conversion distinction checked={}", distinctChecked);
@@ -381,34 +394,40 @@ bool VerifyRenderTargetLayer(const EnginePtr &engine) {
 
     // 命令录制层尚未接进驱动，交换链的 acquire / present 路径传空指针
     Backend::VulkanSwapChainPtr swapChain = resourceManager->AllocateAndConstruct<Backend::VulkanSwapChain>(
-        platformRef, context, resourceManager, allocator, nullptr, stagePool, nullptr, 0, VkExtent2D{ kSwapChainWidth, kSwapChainHeight });
+        platformRef, context, resourceManager, allocator, nullptr, stagePool, nullptr, 0,
+        VkExtent2D{ kSwapChainWidth, kSwapChainHeight });
 
-    Backend::VulkanTexturePtr const colorTexture     = swapChain->GetCurrentColor();
-    Backend::VulkanTexturePtr const depthTexture     = swapChain->GetDepth();
-    bool const                      attachmentsValid = colorTexture && depthTexture && colorTexture->GetExtent2D().width == kSwapChainWidth &&
-                                  colorTexture->GetExtent2D().height == kSwapChainHeight && swapChain->IsFirstRenderPass();
+    Backend::VulkanTexturePtr const colorTexture = swapChain->GetCurrentColor();
+    Backend::VulkanTexturePtr const depthTexture = swapChain->GetDepth();
+    bool const                      attachmentsValid =
+        colorTexture && depthTexture && colorTexture->GetExtent2D().width == kSwapChainWidth &&
+        colorTexture->GetExtent2D().height == kSwapChainHeight && swapChain->IsFirstRenderPass();
     swapChain->MarkFirstRenderPass();
     bool const firstRenderPassCleared = !swapChain->IsFirstRenderPass();
 
     Backend::VulkanRenderTargetPtr renderTarget = resourceManager->AllocateAndConstruct<Backend::VulkanRenderTarget>();
-    bool const                     defaultTargetValid =
-        renderTarget->IsSwapChain() && !renderTarget->IsSwapchainBound() && !renderTarget->HasDepthStencil() && !renderTarget->IsProtected();
+    bool const defaultTargetValid               = renderTarget->IsSwapChain() && !renderTarget->IsSwapchainBound() &&
+                                    !renderTarget->HasDepthStencil() && !renderTarget->IsProtected();
 
     renderTarget->BindSwapChain(swapChain);
     VkExtent2D const targetExtent = renderTarget->GetExtent();
-    bool const       bindValid    = renderTarget->IsSwapchainBound() && renderTarget->HasDepthStencil() && renderTarget->GetSamples() == 1 &&
-                           targetExtent.width == kSwapChainWidth && targetExtent.height == kSwapChainHeight;
+    bool const       bindValid    = renderTarget->IsSwapchainBound() && renderTarget->HasDepthStencil() &&
+                           renderTarget->GetSamples() == 1 && targetExtent.width == kSwapChainWidth &&
+                           targetExtent.height == kSwapChainHeight;
 
-    Backend::VulkanFboCache::RenderPassKey const rpKey = renderTarget->GetRenderPassKey();
-    Backend::VulkanFboCache::FboKey const        fbKey = renderTarget->GetFboKey();
-    bool const keyValid = rpKey.colorFormat[0] == colorTexture->GetFormat() && rpKey.depthStencilFormat == depthTexture->GetFormat() &&
-                          rpKey.samples == 1 && rpKey.viewCount == 1 && fbKey.color[0] != VK_NULL_HANDLE && fbKey.depthStencil != VK_NULL_HANDLE &&
-                          fbKey.width == kSwapChainWidth && fbKey.height == kSwapChainHeight && fbKey.samples == 1;
+    Backend::VulkanFboCache::RenderPassKey const rpKey    = renderTarget->GetRenderPassKey();
+    Backend::VulkanFboCache::FboKey const        fbKey    = renderTarget->GetFboKey();
+    bool const                                   keyValid = rpKey.colorFormat[0] == colorTexture->GetFormat() &&
+                          rpKey.depthStencilFormat == depthTexture->GetFormat() && rpKey.samples == 1 &&
+                          rpKey.viewCount == 1 && fbKey.color[0] != VK_NULL_HANDLE &&
+                          fbKey.depthStencil != VK_NULL_HANDLE && fbKey.width == kSwapChainWidth &&
+                          fbKey.height == kSwapChainHeight && fbKey.samples == 1;
 
     // 上游为私有继承 HwRenderTarget，此处复用驱动侧的取用路径验证句柄转换仍然可用
     Backend::Handle<Backend::HwRenderTarget> const clientHandle(renderTarget->GetId());
-    Backend::VulkanRenderTargetPtr const acquired     = resourceManager->Acquire<Backend::VulkanRenderTarget, Backend::HwRenderTarget>(clientHandle);
-    bool const                           acquireValid = acquired.Get() == renderTarget.Get();
+    Backend::VulkanRenderTargetPtr const           acquired =
+        resourceManager->Acquire<Backend::VulkanRenderTarget, Backend::HwRenderTarget>(clientHandle);
+    bool const acquireValid = acquired.Get() == renderTarget.Get();
 
     bool cacheHitOk   = false;
     bool cacheEvictOk = false;
@@ -425,17 +444,18 @@ bool VerifyRenderTargetLayer(const EnginePtr &engine) {
         Backend::VulkanFramebufferPtr const fbFirst  = fboCache.GetFramebuffer(cacheKey, resourceManager, renderTarget);
         Backend::VulkanFramebufferPtr const fbSecond = fboCache.GetFramebuffer(cacheKey, resourceManager, renderTarget);
 
-        cacheHitOk = rpFirst.Get() == rpSecond.Get() && rpFirst->GetVkRenderPass() != VK_NULL_HANDLE && fbFirst.Get() == fbSecond.Get() &&
-                     fbFirst->GetVkFramebuffer() != VK_NULL_HANDLE;
+        cacheHitOk = rpFirst.Get() == rpSecond.Get() && rpFirst->GetVkRenderPass() != VK_NULL_HANDLE &&
+                     fbFirst.Get() == fbSecond.Get() && fbFirst->GetVkFramebuffer() != VK_NULL_HANDLE;
 
         // 逐出后同 key 必须重建：旧句柄由本地引用续命，故新旧句柄必然不同
         fboCache.ResetFramebuffers();
         for (uint32_t round = 0; round < kFboEvictionRounds; ++round) {
             fboCache.Gc();
         }
-        Backend::VulkanRenderPassPtr const rpAfterGc  = fboCache.GetRenderPass(rpKey, resourceManager);
-        cacheKey.renderPass                           = rpAfterGc->GetVkRenderPass();
-        Backend::VulkanFramebufferPtr const fbAfterGc = fboCache.GetFramebuffer(cacheKey, resourceManager, renderTarget);
+        Backend::VulkanRenderPassPtr const rpAfterGc = fboCache.GetRenderPass(rpKey, resourceManager);
+        cacheKey.renderPass                          = rpAfterGc->GetVkRenderPass();
+        Backend::VulkanFramebufferPtr const fbAfterGc =
+            fboCache.GetFramebuffer(cacheKey, resourceManager, renderTarget);
 
         cacheEvictOk = rpAfterGc.Get() != rpFirst.Get() && rpAfterGc->GetVkRenderPass() != rpFirst->GetVkRenderPass() &&
                        fbAfterGc.Get() != fbFirst.Get() && fbAfterGc->GetVkFramebuffer() != fbFirst->GetVkFramebuffer();
@@ -452,9 +472,10 @@ bool VerifyRenderTargetLayer(const EnginePtr &engine) {
     bool moveValid = false;
     {
         Backend::VulkanRenderTarget movedTarget(std::move(*renderTarget));
-        moveValid = movedTarget.IsSwapchainBound() && movedTarget.HasDepthStencil() && movedTarget.GetExtent().width == kSwapChainWidth &&
-                    movedTarget.GetRenderPassKey().colorFormat[0] == colorTexture->GetFormat() && renderTarget->GetExtent().width == 0 &&
-                    renderTarget->GetExtent().height == 0;
+        moveValid = movedTarget.IsSwapchainBound() && movedTarget.HasDepthStencil() &&
+                    movedTarget.GetExtent().width == kSwapChainWidth &&
+                    movedTarget.GetRenderPassKey().colorFormat[0] == colorTexture->GetFormat() &&
+                    renderTarget->GetExtent().width == 0 && renderTarget->GetExtent().height == 0;
     }
 
     swapChain.Reset();
@@ -475,14 +496,14 @@ bool VerifyRenderTargetLayer(const EnginePtr &engine) {
     // 存在残留分配时该调用会触发 VMA 的 "Some allocations were not freed" 断言
     vmaDestroyAllocator(allocator);
 
-    bool const ok = attachmentsValid && firstRenderPassCleared && defaultTargetValid && bindValid && keyValid && acquireValid && cacheHitOk &&
-                    cacheEvictOk && releaseValid && moveValid && noLeak;
+    bool const ok = attachmentsValid && firstRenderPassCleared && defaultTargetValid && bindValid && keyValid &&
+                    acquireValid && cacheHitOk && cacheEvictOk && releaseValid && moveValid && noLeak;
     if (!ok) {
         LOG_ERROR(
             "render target: attachments={}, firstPass={}, defaultTarget={}, bind={}, key={}, acquire={}, cacheHit={}, "
             "cacheEvict={}, release={}, move={}, noLeak={}",
-            attachmentsValid, firstRenderPassCleared, defaultTargetValid, bindValid, keyValid, acquireValid, cacheHitOk, cacheEvictOk, releaseValid,
-            moveValid, noLeak);
+            attachmentsValid, firstRenderPassCleared, defaultTargetValid, bindValid, keyValid, acquireValid, cacheHitOk,
+            cacheEvictOk, releaseValid, moveValid, noLeak);
         return false;
     }
     LOG_INFO("render target: bind / keys / fbo cache hit / eviction / release / move all verified");
@@ -499,30 +520,38 @@ bool VerifyRenderTargetLayer(const EnginePtr &engine) {
 //   layout(location = 0) out vec4 color;
 //   void main() { color = vec4(1.0); }
 constexpr uint32_t kVertexSpirv[] = {
-    0x07230203, 0x00010000, 0x0008000B, 0x00000014, 0x00000000, 0x00020011, 0x00000001, 0x0006000B, 0x00000001, 0x4C534C47, 0x6474732E, 0x3035342E,
-    0x00000000, 0x0003000E, 0x00000000, 0x00000001, 0x0006000F, 0x00000000, 0x00000004, 0x6E69616D, 0x00000000, 0x0000000D, 0x00030003, 0x00000002,
-    0x000001C2, 0x00040005, 0x00000004, 0x6E69616D, 0x00000000, 0x00060005, 0x0000000B, 0x505F6C67, 0x65567265, 0x78657472, 0x00000000, 0x00060006,
-    0x0000000B, 0x00000000, 0x505F6C67, 0x7469736F, 0x006E6F69, 0x00070006, 0x0000000B, 0x00000001, 0x505F6C67, 0x746E696F, 0x657A6953, 0x00000000,
-    0x00070006, 0x0000000B, 0x00000002, 0x435F6C67, 0x4470696C, 0x61747369, 0x0065636E, 0x00070006, 0x0000000B, 0x00000003, 0x435F6C67, 0x446C6C75,
-    0x61747369, 0x0065636E, 0x00030005, 0x0000000D, 0x00000000, 0x00030047, 0x0000000B, 0x00000002, 0x00050048, 0x0000000B, 0x00000000, 0x0000000B,
-    0x00000000, 0x00050048, 0x0000000B, 0x00000001, 0x0000000B, 0x00000001, 0x00050048, 0x0000000B, 0x00000002, 0x0000000B, 0x00000003, 0x00050048,
-    0x0000000B, 0x00000003, 0x0000000B, 0x00000004, 0x00020013, 0x00000002, 0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, 0x00000020,
-    0x00040017, 0x00000007, 0x00000006, 0x00000004, 0x00040015, 0x00000008, 0x00000020, 0x00000000, 0x0004002B, 0x00000008, 0x00000009, 0x00000001,
-    0x0004001C, 0x0000000A, 0x00000006, 0x00000009, 0x0006001E, 0x0000000B, 0x00000007, 0x00000006, 0x0000000A, 0x0000000A, 0x00040020, 0x0000000C,
-    0x00000003, 0x0000000B, 0x0004003B, 0x0000000C, 0x0000000D, 0x00000003, 0x00040015, 0x0000000E, 0x00000020, 0x00000001, 0x0004002B, 0x0000000E,
-    0x0000000F, 0x00000000, 0x0004002B, 0x00000006, 0x00000010, 0x3F800000, 0x0007002C, 0x00000007, 0x00000011, 0x00000010, 0x00000010, 0x00000010,
-    0x00000010, 0x00040020, 0x00000012, 0x00000003, 0x00000007, 0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003, 0x000200F8, 0x00000005,
-    0x00050041, 0x00000012, 0x00000013, 0x0000000D, 0x0000000F, 0x0003003E, 0x00000013, 0x00000011, 0x000100FD, 0x00010038,
+    0x07230203, 0x00010000, 0x0008000B, 0x00000014, 0x00000000, 0x00020011, 0x00000001, 0x0006000B, 0x00000001,
+    0x4C534C47, 0x6474732E, 0x3035342E, 0x00000000, 0x0003000E, 0x00000000, 0x00000001, 0x0006000F, 0x00000000,
+    0x00000004, 0x6E69616D, 0x00000000, 0x0000000D, 0x00030003, 0x00000002, 0x000001C2, 0x00040005, 0x00000004,
+    0x6E69616D, 0x00000000, 0x00060005, 0x0000000B, 0x505F6C67, 0x65567265, 0x78657472, 0x00000000, 0x00060006,
+    0x0000000B, 0x00000000, 0x505F6C67, 0x7469736F, 0x006E6F69, 0x00070006, 0x0000000B, 0x00000001, 0x505F6C67,
+    0x746E696F, 0x657A6953, 0x00000000, 0x00070006, 0x0000000B, 0x00000002, 0x435F6C67, 0x4470696C, 0x61747369,
+    0x0065636E, 0x00070006, 0x0000000B, 0x00000003, 0x435F6C67, 0x446C6C75, 0x61747369, 0x0065636E, 0x00030005,
+    0x0000000D, 0x00000000, 0x00030047, 0x0000000B, 0x00000002, 0x00050048, 0x0000000B, 0x00000000, 0x0000000B,
+    0x00000000, 0x00050048, 0x0000000B, 0x00000001, 0x0000000B, 0x00000001, 0x00050048, 0x0000000B, 0x00000002,
+    0x0000000B, 0x00000003, 0x00050048, 0x0000000B, 0x00000003, 0x0000000B, 0x00000004, 0x00020013, 0x00000002,
+    0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, 0x00000020, 0x00040017, 0x00000007, 0x00000006,
+    0x00000004, 0x00040015, 0x00000008, 0x00000020, 0x00000000, 0x0004002B, 0x00000008, 0x00000009, 0x00000001,
+    0x0004001C, 0x0000000A, 0x00000006, 0x00000009, 0x0006001E, 0x0000000B, 0x00000007, 0x00000006, 0x0000000A,
+    0x0000000A, 0x00040020, 0x0000000C, 0x00000003, 0x0000000B, 0x0004003B, 0x0000000C, 0x0000000D, 0x00000003,
+    0x00040015, 0x0000000E, 0x00000020, 0x00000001, 0x0004002B, 0x0000000E, 0x0000000F, 0x00000000, 0x0004002B,
+    0x00000006, 0x00000010, 0x3F800000, 0x0007002C, 0x00000007, 0x00000011, 0x00000010, 0x00000010, 0x00000010,
+    0x00000010, 0x00040020, 0x00000012, 0x00000003, 0x00000007, 0x00050036, 0x00000002, 0x00000004, 0x00000000,
+    0x00000003, 0x000200F8, 0x00000005, 0x00050041, 0x00000012, 0x00000013, 0x0000000D, 0x0000000F, 0x0003003E,
+    0x00000013, 0x00000011, 0x000100FD, 0x00010038,
 };
 
 constexpr uint32_t kFragmentSpirv[] = {
-    0x07230203, 0x00010000, 0x0008000B, 0x0000000C, 0x00000000, 0x00020011, 0x00000001, 0x0006000B, 0x00000001, 0x4C534C47, 0x6474732E, 0x3035342E,
-    0x00000000, 0x0003000E, 0x00000000, 0x00000001, 0x0006000F, 0x00000004, 0x00000004, 0x6E69616D, 0x00000000, 0x00000009, 0x00030010, 0x00000004,
-    0x00000007, 0x00030003, 0x00000002, 0x000001C2, 0x00040005, 0x00000004, 0x6E69616D, 0x00000000, 0x00040005, 0x00000009, 0x6F6C6F63, 0x00000072,
-    0x00040047, 0x00000009, 0x0000001E, 0x00000000, 0x00020013, 0x00000002, 0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, 0x00000020,
-    0x00040017, 0x00000007, 0x00000006, 0x00000004, 0x00040020, 0x00000008, 0x00000003, 0x00000007, 0x0004003B, 0x00000008, 0x00000009, 0x00000003,
-    0x0004002B, 0x00000006, 0x0000000A, 0x3F800000, 0x0007002C, 0x00000007, 0x0000000B, 0x0000000A, 0x0000000A, 0x0000000A, 0x0000000A, 0x00050036,
-    0x00000002, 0x00000004, 0x00000000, 0x00000003, 0x000200F8, 0x00000005, 0x0003003E, 0x00000009, 0x0000000B, 0x000100FD, 0x00010038,
+    0x07230203, 0x00010000, 0x0008000B, 0x0000000C, 0x00000000, 0x00020011, 0x00000001, 0x0006000B, 0x00000001,
+    0x4C534C47, 0x6474732E, 0x3035342E, 0x00000000, 0x0003000E, 0x00000000, 0x00000001, 0x0006000F, 0x00000004,
+    0x00000004, 0x6E69616D, 0x00000000, 0x00000009, 0x00030010, 0x00000004, 0x00000007, 0x00030003, 0x00000002,
+    0x000001C2, 0x00040005, 0x00000004, 0x6E69616D, 0x00000000, 0x00040005, 0x00000009, 0x6F6C6F63, 0x00000072,
+    0x00040047, 0x00000009, 0x0000001E, 0x00000000, 0x00020013, 0x00000002, 0x00030021, 0x00000003, 0x00000002,
+    0x00030016, 0x00000006, 0x00000020, 0x00040017, 0x00000007, 0x00000006, 0x00000004, 0x00040020, 0x00000008,
+    0x00000003, 0x00000007, 0x0004003B, 0x00000008, 0x00000009, 0x00000003, 0x0004002B, 0x00000006, 0x0000000A,
+    0x3F800000, 0x0007002C, 0x00000007, 0x0000000B, 0x0000000A, 0x0000000A, 0x0000000A, 0x0000000A, 0x00050036,
+    0x00000002, 0x00000004, 0x00000000, 0x00000003, 0x000200F8, 0x00000005, 0x0003003E, 0x00000009, 0x0000000B,
+    0x000100FD, 0x00010038,
 };
 
 // pushConstantStage 决定 push constant 挂在哪个 stage：管线布局缓存的键包含该信息
@@ -534,31 +563,31 @@ Backend::Program MakeShaderProgram(Backend::ShaderStage pushConstantStage) {
     return builder;
 }
 
-Backend::VulkanProgramPtr MakeVulkanProgram(VkDevice device, const Backend::ResourceManagerPtr &resourceManager, const Backend::Program &builder) {
+Backend::VulkanProgramPtr MakeVulkanProgram(VkDevice device, const Backend::ResourceManagerPtr &resourceManager,
+                                            const Backend::Program &builder) {
     auto const handle = resourceManager->AllocHandle<Backend::VulkanProgram>();
     return resourceManager->Make<Backend::VulkanProgram>(handle, device, builder);
 }
 
-// ThreadSafeResource 的归零入队路径——变更 1 所建双 GC 队列的首次运行时验证。
-//
-// 断言三件事：引用归零进入的是线程安全队列（而非普通队列）、Gc() 排空后对象已析构、
-// 池块已归还（以「同尺寸再分配拿到同一地址」观测）。
 bool VerifyThreadSafeProgramPath(VkDevice device, const Backend::ResourceManagerPtr &resourceManager) {
     Backend::Program builder = MakeShaderProgram(Backend::ShaderStage::VERTEX);
 
     Backend::VulkanProgramPtr     program    = MakeVulkanProgram(device, resourceManager, builder);
     Backend::VulkanProgram *const rawProgram = program.Get();
 
-    bool const shadersValid = program->GetVertexShader() != VK_NULL_HANDLE && program->GetFragmentShader() != VK_NULL_HANDLE &&
+    bool const shadersValid = program->GetVertexShader() != VK_NULL_HANDLE &&
+                              program->GetFragmentShader() != VK_NULL_HANDLE &&
                               program->GetPushConstantRangeCount() == 1 && !program->IsParallelCompilationCanceled();
     program->CancelParallelCompilation();
     bool const cancelValid = program->IsParallelCompilationCanceled();
 
     resourceManager->Destroy(program);
-    bool const queuedToThreadSafeList = resourceManager->GetPendingThreadSafeGcCount() == 1 && resourceManager->GetPendingGcCount() == 0;
+    bool const queuedToThreadSafeList =
+        resourceManager->GetPendingThreadSafeGcCount() == 1 && resourceManager->GetPendingGcCount() == 0;
 
     resourceManager->Gc();
-    bool const drainedOk = resourceManager->GetPendingThreadSafeGcCount() == 0 && resourceManager->GetPendingGcCount() == 0;
+    bool const drainedOk =
+        resourceManager->GetPendingThreadSafeGcCount() == 0 && resourceManager->GetPendingGcCount() == 0;
 
     // 池块归还：句柄 arena 的同尺寸池应把刚释放的块再交出来
     Backend::VulkanProgramPtr reused            = MakeVulkanProgram(device, resourceManager, builder);
@@ -567,11 +596,13 @@ bool VerifyThreadSafeProgramPath(VkDevice device, const Backend::ResourceManager
     resourceManager->Gc();
 
     if (!shadersValid || !cancelValid || !queuedToThreadSafeList || !drainedOk || !poolBlockReturned) {
-        LOG_ERROR("thread safe program path: shaders={}, cancel={}, threadSafeQueue={}, drained={}, poolBlock={}", shadersValid, cancelValid,
-                  queuedToThreadSafeList, drainedOk, poolBlockReturned);
+        LOG_ERROR("thread safe program path: shaders={}, cancel={}, threadSafeQueue={}, drained={}, poolBlock={}",
+                  shadersValid, cancelValid, queuedToThreadSafeList, drainedOk, poolBlockReturned);
         return false;
     }
-    LOG_INFO("thread safe program path: shutdown of shader modules, thread-safe queue routing, pool block return all verified");
+    LOG_INFO(
+        "thread safe program path: shutdown of shader modules, thread-safe queue routing, pool block return all "
+        "verified");
     return true;
 }
 
@@ -580,8 +611,8 @@ bool VerifyPipelineLayoutCache(VkDevice device, const Backend::ResourceManagerPt
     Backend::VulkanPipelineLayoutCache layoutCache(device);
 
     Backend::VulkanDescriptorSetLayout::DescriptorSetLayoutArray const vkLayouts = {};
-    Backend::Program                                                   builderA  = MakeShaderProgram(Backend::ShaderStage::VERTEX);
-    Backend::Program                                                   builderB  = MakeShaderProgram(Backend::ShaderStage::FRAGMENT);
+    Backend::Program builderA = MakeShaderProgram(Backend::ShaderStage::VERTEX);
+    Backend::Program builderB = MakeShaderProgram(Backend::ShaderStage::FRAGMENT);
 
     Backend::VulkanProgramPtr programA = MakeVulkanProgram(device, resourceManager, builderA);
     Backend::VulkanProgramPtr programB = MakeVulkanProgram(device, resourceManager, builderB);
@@ -620,11 +651,12 @@ bool VerifyDescriptorSetLayoutCache(VkDevice device, const Backend::ResourceMana
         .count      = 1,
     });
 
-    Backend::Handle<Backend::HwDescriptorSetLayout> const handle  = resourceManager->AllocHandle<Backend::VulkanDescriptorSetLayout>();
-    Backend::VulkanDescriptorSetLayoutPtr                 created = layoutCache.CreateLayout(handle, std::move(layout));
+    Backend::Handle<Backend::HwDescriptorSetLayout> const handle =
+        resourceManager->AllocHandle<Backend::VulkanDescriptorSetLayout>();
+    Backend::VulkanDescriptorSetLayoutPtr created = layoutCache.CreateLayout(handle, std::move(layout));
 
-    bool const createdValid = created && created->GetVkLayout() != VK_NULL_HANDLE && created->count.ubo == 1 && created->count.Total() == 1 &&
-                              !created->HasExternalSamplers();
+    bool const createdValid = created && created->GetVkLayout() != VK_NULL_HANDLE && created->count.ubo == 1 &&
+                              created->count.Total() == 1 && !created->HasExternalSamplers();
 
     // 同一掩码再取应命中同一 VkDescriptorSetLayout
     VkDescriptorSetLayout const again = layoutCache.GetVkLayout(created->bitmask, created->bitmask.externalSampler);
@@ -658,13 +690,14 @@ bool VerifyDescriptorSetCache(VkDevice device, const Backend::ResourceManagerPtr
         .count      = 1,
     });
 
-    auto const                            layoutHandle   = resourceManager->AllocHandle<Backend::VulkanDescriptorSetLayout>();
+    auto const layoutHandle = resourceManager->AllocHandle<Backend::VulkanDescriptorSetLayout>();
     Backend::VulkanDescriptorSetLayoutPtr layoutResource = layoutCache.CreateLayout(layoutHandle, std::move(layout));
     // 句柄池块的尺寸取自具体类型，故必须按 VulkanDescriptorSet 申请而非其 Hw 基类
     auto const setHandle = resourceManager->AllocHandle<Backend::VulkanDescriptorSet>();
 
-    Backend::VulkanDescriptorSetPtr set      = setCache.CreateSet(setHandle, layoutResource);
-    bool const                      setValid = set && set->GetVkSet() != VK_NULL_HANDLE && set->uniqueDynamicUboCount == 0 && !set->IsBound();
+    Backend::VulkanDescriptorSetPtr set = setCache.CreateSet(setHandle, layoutResource);
+    bool const                      setValid =
+        set && set->GetVkSet() != VK_NULL_HANDLE && set->uniqueDynamicUboCount == 0 && !set->IsBound();
 
     setCache.Bind(1, set, Backend::DescriptorSetOffsetArray{ 0u, 0u });
     bool const bindValid = setCache.GetBoundSets()[1].Get() == set.Get() && set->GetOffsets()->Size() == 2;
@@ -696,7 +729,7 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
 
     Backend::VulkanPipelineLayoutCache                                 layoutCache(device);
     Backend::VulkanDescriptorSetLayout::DescriptorSetLayoutArray const vkLayouts = {};
-    VkPipelineLayout const                                             layout    = layoutCache.GetLayout(vkLayouts, program);
+    VkPipelineLayout const layout = layoutCache.GetLayout(vkLayouts, program);
 
     // 管线创建需要真实的 VkRenderPass：颜色附件格式与 RasterState.colorTargetCount 对应
     VkAttachmentDescription const colorAttachment{
@@ -739,21 +772,23 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
         LOG_ERROR("pipeline cache: vkCreateRenderPass failed");
         return false;
     }
-    Backend::VulkanRenderPassPtr renderPass = resourceManager->AllocateAndConstruct<Backend::VulkanRenderPass>(device, vkRenderPass);
+    Backend::VulkanRenderPassPtr renderPass =
+        resourceManager->AllocateAndConstruct<Backend::VulkanRenderPass>(device, vkRenderPass);
 
     // 字段顺序与 VulkanDriver::bindPipelineImpl 的指定初始化器一致
     Backend::VulkanPipelineCache::RasterState const rasterState{
-        .cullMode                = VK_CULL_MODE_NONE,
-        .frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-        .depthBiasEnable         = VK_FALSE,
-        .blendEnable             = VK_FALSE,
-        .depthWriteEnable        = VK_FALSE,
-        .alphaToCoverageEnable   = VK_FALSE,
-        .srcColorBlendFactor     = VK_BLEND_FACTOR_ONE,
-        .dstColorBlendFactor     = VK_BLEND_FACTOR_ONE,
-        .srcAlphaBlendFactor     = VK_BLEND_FACTOR_ONE,
-        .dstAlphaBlendFactor     = VK_BLEND_FACTOR_ONE,
-        .colorWriteMask          = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+        .cullMode              = VK_CULL_MODE_NONE,
+        .frontFace             = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable       = VK_FALSE,
+        .blendEnable           = VK_FALSE,
+        .depthWriteEnable      = VK_FALSE,
+        .alphaToCoverageEnable = VK_FALSE,
+        .srcColorBlendFactor   = VK_BLEND_FACTOR_ONE,
+        .dstColorBlendFactor   = VK_BLEND_FACTOR_ONE,
+        .srcAlphaBlendFactor   = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor   = VK_BLEND_FACTOR_ONE,
+        .colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
         .rasterizationSamples    = VK_SAMPLE_COUNT_1_BIT,
         .depthClamp              = VK_FALSE,
         .colorTargetCount        = 1,
@@ -773,7 +808,7 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
     Backend::VulkanPipelineCache::PipelineCacheEntry const *first        = pipelineCache.GetOrCreatePipeline();
     VkPipeline const                                        firstHandle  = first->handle;
     VkPipeline const                                        secondHandle = pipelineCache.GetOrCreatePipeline()->handle;
-    bool const                                              cacheHit     = firstHandle != VK_NULL_HANDLE && firstHandle == secondHandle;
+    bool const cacheHit = firstHandle != VK_NULL_HANDLE && firstHandle == secondHandle;
 
     // 仅 cullMode 不同 → 必须新建一条管线
     Backend::VulkanPipelineCache::RasterState otherState = rasterState;
@@ -803,8 +838,8 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
     resourceManager->Gc();
 
     if (!cacheHit || !stateDistinct || !twoEntriesCached || !gcEmptiedCache || !rebuilt) {
-        LOG_ERROR("pipeline cache: hit={}, distinct={}, twoEntries={}, gcEmptied={}, rebuilt={}", cacheHit, stateDistinct, twoEntriesCached,
-                  gcEmptiedCache, rebuilt);
+        LOG_ERROR("pipeline cache: hit={}, distinct={}, twoEntries={}, gcEmptied={}, rebuilt={}", cacheHit,
+                  stateDistinct, twoEntriesCached, gcEmptiedCache, rebuilt);
         return false;
     }
     LOG_INFO("pipeline cache: same-key hit / distinct-key creation / gc eviction / rebuild all verified");
@@ -815,8 +850,8 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
 bool VerifyQueryManager(VkDevice device, const Backend::ResourceManagerPtr &resourceManager) {
     Backend::VulkanQueryManager queryManager(device);
 
-    Backend::VulkanTimerQueryPtr first    = queryManager.GetNextQuery(resourceManager);
-    bool const                   acquired = first && first->GetStoppingQueryIndex() == first->GetStartingQueryIndex() + 1;
+    Backend::VulkanTimerQueryPtr first = queryManager.GetNextQuery(resourceManager);
+    bool const acquired                = first && first->GetStoppingQueryIndex() == first->GetStartingQueryIndex() + 1;
 
     uint32_t const releasedIndex = first->GetStartingQueryIndex();
     queryManager.ClearQuery(first);
@@ -861,7 +896,8 @@ bool VerifyReadPixels(VkDevice device) {
         readPixels.Terminate();  // 幂等
         readPixels.RunUntilComplete();
     }
-    auto const elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    auto const elapsedMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
 
     // 线程体本身：投递 → 排空 → 关闭 join，且关闭后剩余任务仍触发完成回调
     Backend::VulkanReadPixels::TaskHandler handler;
@@ -928,13 +964,18 @@ bool VerifyPipelineLayer(const EnginePtr &engine) {
     // 存在残留分配时该调用会触发 VMA 的 "Some allocations were not freed" 断言
     vmaDestroyAllocator(allocator);
 
-    bool const ok = programOk && layoutOk && descriptorLayoutOk && descriptorSetOk && pipelineOk && queryOk && readPixelsOk && noLeak;
+    bool const ok = programOk && layoutOk && descriptorLayoutOk && descriptorSetOk && pipelineOk && queryOk &&
+                    readPixelsOk && noLeak;
     if (!ok) {
-        LOG_ERROR("pipeline layer: program={}, layout={}, descriptorLayout={}, descriptorSet={}, pipeline={}, query={}, readPixels={}, noLeak={}",
-                  programOk, layoutOk, descriptorLayoutOk, descriptorSetOk, pipelineOk, queryOk, readPixelsOk, noLeak);
+        LOG_ERROR(
+            "pipeline layer: program={}, layout={}, descriptorLayout={}, descriptorSet={}, pipeline={}, query={}, "
+            "readPixels={}, noLeak={}",
+            programOk, layoutOk, descriptorLayoutOk, descriptorSetOk, pipelineOk, queryOk, readPixelsOk, noLeak);
         return false;
     }
-    LOG_INFO("pipeline layer: program / pipeline layout / descriptor layout / descriptor set / pipeline cache / query / readback all verified");
+    LOG_INFO(
+        "pipeline layer: program / pipeline layout / descriptor layout / descriptor set / pipeline cache / query / "
+        "readback all verified");
     return true;
 }
 }  // namespace
@@ -976,9 +1017,12 @@ void App::Run(const SetupCallback &setupCallback, const CleanUpCallback &cleanup
         engine->DestroyFence(fence);
 
         // 交替 16 位与 32 位索引，覆盖元素宽度换算的两条分支
-        Backend::ElementType const       elementType = (frame % 2 == 0) ? Backend::ElementType::USHORT : Backend::ElementType::UINT;
-        Backend::IndexBufferHandle const ibh         = engine->CreateIndexBuffer(elementType, kIndexCount, Backend::BufferUsage::STATIC);
-        LOG_INFO("frame {}: index buffer id={}, element size={}", frame, ibh.GetId(), Backend::Driver::GetElementTypeSize(elementType));
+        Backend::ElementType const elementType =
+            (frame % 2 == 0) ? Backend::ElementType::USHORT : Backend::ElementType::UINT;
+        Backend::IndexBufferHandle const ibh =
+            engine->CreateIndexBuffer(elementType, kIndexCount, Backend::BufferUsage::STATIC);
+        LOG_INFO("frame {}: index buffer id={}, element size={}", frame, ibh.GetId(),
+                 Backend::Driver::GetElementTypeSize(elementType));
         engine->DestroyIndexBuffer(ibh);
 
         engine->Flush();
@@ -1059,8 +1103,8 @@ bool VerifyDrawTriangleEndToEnd() {
 
     Backend::VertexBufferInfoHandle const vbih = engine->CreateVertexBufferInfo(1, 1, attributes);
     Backend::VertexBufferHandle const     vbh  = engine->CreateVertexBuffer(3, vbih);
-    Backend::BufferObjectHandle const     boh =
-        engine->CreateBufferObject(sizeof(kFullScreenTriangle), Backend::BufferObjectBinding::Vertex, Backend::BufferUsage::STATIC);
+    Backend::BufferObjectHandle const     boh  = engine->CreateBufferObject(
+        sizeof(kFullScreenTriangle), Backend::BufferObjectBinding::Vertex, Backend::BufferUsage::STATIC);
     if (!vbih || !vbh || !boh) {
         LOG_ERROR("triangle: vertex buffer creation failed");
         return false;
@@ -1069,7 +1113,8 @@ bool VerifyDrawTriangleEndToEnd() {
     engine->SetVertexBufferObject(vbh, 0, boh);
     engine->UpdateBufferObject(boh, Backend::BufferDescriptor(kFullScreenTriangle, sizeof(kFullScreenTriangle)), 0);
 
-    Backend::RenderPrimitiveHandle const rph = engine->CreateRenderPrimitive(vbh, {}, Backend::PrimitiveType::TRIANGLES);
+    Backend::RenderPrimitiveHandle const rph =
+        engine->CreateRenderPrimitive(vbh, {}, Backend::PrimitiveType::TRIANGLES);
     if (!rph) {
         LOG_ERROR("triangle: createRenderPrimitive failed");
         return false;
@@ -1112,18 +1157,20 @@ bool VerifyDrawTriangleEndToEnd() {
 
     uint8_t  centerPixel[4]      = {};
     uint32_t centerCallbackCount = 0;
-    engine->ReadPixels(rth, kTriangleSize / 2, kTriangleSize / 2, 1, 1,
-                       Backend::PixelBufferDescriptor(
-                           centerPixel, sizeof(centerPixel), Backend::PixelDataFormat::RGBA, Backend::PixelDataType::UBYTE,
-                           [](void *, size_t, void *user) { ++(*static_cast<uint32_t *>(user)); }, &centerCallbackCount));
+    engine->ReadPixels(
+        rth, kTriangleSize / 2, kTriangleSize / 2, 1, 1,
+        Backend::PixelBufferDescriptor(
+            centerPixel, sizeof(centerPixel), Backend::PixelDataFormat::RGBA, Backend::PixelDataType::UBYTE,
+            [](void *, size_t, void *user) { ++(*static_cast<uint32_t *>(user)); }, &centerCallbackCount));
     if (centerCallbackCount != 1) {
         LOG_ERROR("triangle: readPixels completion callback fired {} times, expected 1", centerCallbackCount);
         return false;
     }
-    LOG_INFO("draw path: triangle sequence center pixel = ({}, {}, {}), fragment color expected ({}, {}, {})", centerPixel[0], centerPixel[1],
-             centerPixel[2], kExpectedRed, kExpectedGreen, kExpectedBlue);
+    LOG_INFO("draw path: triangle sequence center pixel = ({}, {}, {}), fragment color expected ({}, {}, {})",
+             centerPixel[0], centerPixel[1], centerPixel[2], kExpectedRed, kExpectedGreen, kExpectedBlue);
 
-    bool const centerIsRed = ColorNear(centerPixel[0], kExpectedRed, kColorTolerance) && ColorNear(centerPixel[1], kExpectedGreen, kColorTolerance) &&
+    bool const centerIsRed = ColorNear(centerPixel[0], kExpectedRed, kColorTolerance) &&
+                             ColorNear(centerPixel[1], kExpectedGreen, kColorTolerance) &&
                              ColorNear(centerPixel[2], kExpectedBlue, kColorTolerance);
 
     LOG_INFO("draw path: triangle rendered and verified (center pixel matches the fragment shader output)");
@@ -1175,13 +1222,14 @@ void App::RunWindowed(uint32_t width, uint32_t height) {
 
     Backend::VertexBufferInfoHandle const vbih = engine->CreateVertexBufferInfo(1, 1, attributes);
     Backend::VertexBufferHandle const     vbh  = engine->CreateVertexBuffer(3, vbih);
-    Backend::BufferObjectHandle const     boh =
-        engine->CreateBufferObject(sizeof(kWindowTriangle), Backend::BufferObjectBinding::Vertex, Backend::BufferUsage::STATIC);
+    Backend::BufferObjectHandle const     boh  = engine->CreateBufferObject(
+        sizeof(kWindowTriangle), Backend::BufferObjectBinding::Vertex, Backend::BufferUsage::STATIC);
     engine->UpdateBufferObject(boh, Backend::BufferDescriptor(kWindowTriangle, sizeof(kWindowTriangle)), 0);
     engine->SetVertexBufferObject(vbh, 0, boh);
 
-    Backend::RenderPrimitiveHandle const rph = engine->CreateRenderPrimitive(vbh, {}, Backend::PrimitiveType::TRIANGLES);
-    Backend::RenderTargetHandle const    rth = engine->CreateDefaultRenderTarget();
+    Backend::RenderPrimitiveHandle const rph =
+        engine->CreateRenderPrimitive(vbh, {}, Backend::PrimitiveType::TRIANGLES);
+    Backend::RenderTargetHandle const rth = engine->CreateDefaultRenderTarget();
 
     Backend::PipelineState state;
     state.program                = ph;

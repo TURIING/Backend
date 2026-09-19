@@ -18,7 +18,8 @@ struct VulkanCommandBuffer;
 class VulkanBufferProxy {
 public:
     VulkanBufferProxy(const VulkanContextPtr& context, VmaAllocator allocator, const VulkanStagePoolPtr& stagePool,
-                      const VulkanBufferCachePtr& bufferCache, VulkanBufferBinding binding, BufferUsage usage, uint32_t numBytes);
+                      const VulkanBufferCachePtr& bufferCache, VulkanBufferBinding binding, BufferUsage usage,
+                      uint32_t numBytes);
 
     void LoadFromCpu(VulkanCommandBuffer& commands, void const* cpuData, uint32_t byteOffset, uint32_t numBytes);
 
@@ -33,10 +34,9 @@ private:
     VmaAllocator         m_allocator;
     VulkanStagePoolPtr   m_stagePool;
     VulkanBufferCachePtr m_bufferCache;
-
-    VulkanBufferPtr m_buffer;
-    uint32_t        m_lastReadAge = 0;
-    BufferUsage     m_usage;
+    VulkanBufferPtr      m_buffer;
+    uint32_t             m_lastReadAge = 0;
+    BufferUsage          m_usage;
 };
 
 END_NS_BACKEND

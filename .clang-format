@@ -13,7 +13,7 @@ ContinuationIndentWidth: 4                               # 续行缩进宽度：
 SpacesInContainerLiterals: true
 Cpp11BracedListStyle: false
 
-ColumnLimit: 150                                         # 单行最大 150 列
+ColumnLimit: 120                                         # 单行最大列数
 
 AlignConsecutiveDeclarations:                            # 对齐连续声明
   Enabled: true                                          # 启用

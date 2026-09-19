@@ -99,7 +99,8 @@ Backend::FenceHandle Engine::CreateFence() { return m_stream->createFence(); }
 
 void Engine::DestroyFence(Backend::FenceHandle fh) { m_stream->destroyFence(fh); }
 
-Backend::IndexBufferHandle Engine::CreateIndexBuffer(Backend::ElementType type, uint32_t indexCount, Backend::BufferUsage usage) {
+Backend::IndexBufferHandle Engine::CreateIndexBuffer(Backend::ElementType type, uint32_t indexCount,
+                                                     Backend::BufferUsage usage) {
     return m_stream->CreateIndexBuffer(type, indexCount, usage);
 }
 
@@ -115,11 +116,15 @@ Backend::SwapChainHandle Engine::CreateSwapChainHeadless(uint32_t width, uint32_
     return m_stream->CreateSwapChainHeadless(width, height, flags);
 }
 
-Backend::SwapChainHandle Engine::CreateSwapChain(void* nativeWindow, uint64_t flags) { return m_stream->CreateSwapChain(nativeWindow, flags); }
+Backend::SwapChainHandle Engine::CreateSwapChain(void* nativeWindow, uint64_t flags) {
+    return m_stream->CreateSwapChain(nativeWindow, flags);
+}
 
 void Engine::DestroySwapChain(Backend::SwapChainHandle sch) { m_stream->DestroySwapChain(sch); }
 
-Backend::ProgramHandle Engine::CreateProgram(Backend::Program&& program) { return m_stream->CreateProgram(std::move(program)); }
+Backend::ProgramHandle Engine::CreateProgram(Backend::Program&& program) {
+    return m_stream->CreateProgram(std::move(program));
+}
 
 void Engine::DestroyProgram(Backend::ProgramHandle ph) { m_stream->DestroyProgram(ph); }
 
@@ -136,13 +141,15 @@ Backend::VertexBufferHandle Engine::CreateVertexBuffer(uint32_t vertexCount, Bac
 
 void Engine::DestroyVertexBuffer(Backend::VertexBufferHandle vbh) { m_stream->DestroyVertexBuffer(vbh); }
 
-Backend::BufferObjectHandle Engine::CreateBufferObject(uint32_t byteCount, Backend::BufferObjectBinding bindingType, Backend::BufferUsage usage) {
+Backend::BufferObjectHandle Engine::CreateBufferObject(uint32_t byteCount, Backend::BufferObjectBinding bindingType,
+                                                       Backend::BufferUsage usage) {
     return m_stream->CreateBufferObject(byteCount, bindingType, usage);
 }
 
 void Engine::DestroyBufferObject(Backend::BufferObjectHandle boh) { m_stream->DestroyBufferObject(boh); }
 
-void Engine::UpdateBufferObject(Backend::BufferObjectHandle boh, Backend::BufferDescriptor&& data, uint32_t byteOffset) {
+void Engine::UpdateBufferObject(Backend::BufferObjectHandle boh, Backend::BufferDescriptor&& data,
+                                uint32_t byteOffset) {
     m_stream->UpdateBufferObject(boh, std::move(data), byteOffset);
 }
 
@@ -150,8 +157,9 @@ void Engine::SetVertexBufferObject(Backend::VertexBufferHandle vbh, uint32_t ind
     m_stream->SetVertexBufferObject(vbh, index, boh);
 }
 
-Backend::RenderPrimitiveHandle Engine::CreateRenderPrimitive(Backend::VertexBufferHandle vbh, Backend::IndexBufferHandle ibh,
-                                                             Backend::PrimitiveType pt) {
+Backend::RenderPrimitiveHandle Engine::CreateRenderPrimitive(Backend::VertexBufferHandle vbh,
+                                                             Backend::IndexBufferHandle  ibh,
+                                                             Backend::PrimitiveType      pt) {
     return m_stream->CreateRenderPrimitive(vbh, ibh, pt);
 }
 
@@ -159,9 +167,13 @@ void Engine::DestroyRenderPrimitive(Backend::RenderPrimitiveHandle rph) { m_stre
 
 Backend::RenderTargetHandle Engine::CreateDefaultRenderTarget() { return m_stream->CreateDefaultRenderTarget(); }
 
-void Engine::MakeCurrent(Backend::SwapChainHandle drawSch, Backend::SwapChainHandle readSch) { m_stream->MakeCurrent(drawSch, readSch); }
+void Engine::MakeCurrent(Backend::SwapChainHandle drawSch, Backend::SwapChainHandle readSch) {
+    m_stream->MakeCurrent(drawSch, readSch);
+}
 
-void Engine::BeginRenderPass(Backend::RenderTargetHandle rth, Backend::RenderPassParams const& params) { m_stream->BeginRenderPass(rth, params); }
+void Engine::BeginRenderPass(Backend::RenderTargetHandle rth, Backend::RenderPassParams const& params) {
+    m_stream->BeginRenderPass(rth, params);
+}
 
 void Engine::EndRenderPass() { m_stream->EndRenderPass(); }
 
@@ -211,7 +223,9 @@ void Engine::WaitForReadPixels() {
     FlushAndFinish();
 }
 
-Backend::DriverBase* Engine::GetDriverBase() const noexcept { return static_cast<Backend::DriverBase*>(m_driver.Get()); }
+Backend::DriverBase* Engine::GetDriverBase() const noexcept {
+    return static_cast<Backend::DriverBase*>(m_driver.Get());
+}
 
 void Engine::Terminate() {
     if (m_terminated) {
