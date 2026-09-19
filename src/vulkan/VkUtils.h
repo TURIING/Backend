@@ -1,9 +1,13 @@
 #pragma once
 
+#include "Backend/DriverDefine.h"
+#include "Backend/Namespace.h"
+
+#include "Utils/Log.h"
+
+#include <string_view>
 #include <utility>
 #include <vector>
-
-#include "Backend/DriverDefine.h"
 
 BEGIN_NS_BACKEND
 
@@ -18,13 +22,13 @@ StructA *chainStruct(StructA *structA, StructB *structB) {
     return structA;
 }
 
+// 返回首个同时支持 flags 且队列数非零的队列族索引，找不到时返回 UINT32_MAX
 inline uint32_t IdentifyGraphicsQueueFamilyIndex(VkPhysicalDevice device, VkQueueFlags flags) {
     uint32_t queueFamiliesCount;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamiliesProperties(queueFamiliesCount);
     if (queueFamiliesCount > 0) {
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount,
-                                                 queueFamiliesProperties.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, queueFamiliesProperties.data());
     }
     uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
     for (uint32_t j = 0; j < queueFamiliesProperties.size(); ++j) {
@@ -62,7 +66,6 @@ inline bool IsVkStencilFormat(VkFormat format) {
             return false;
     }
 }
-
 
 /********************************** CALL_VK **************************************/
 #if NDEBUG
@@ -213,11 +216,18 @@ std::vector<OutType> enumerate(VKAPI_ATTR VkResult (*func)(InType, uint32_t *, O
 }
 
 template <typename InTypeA, typename InTypeB, typename OutType>
-std::vector<OutType> enumerate(VKAPI_ATTR VkResult (*func)(InTypeA, InTypeB, uint32_t *, OutType *), InTypeA inDataA,
-                               InTypeB inDataB) {
+std::vector<OutType> enumerate(VKAPI_ATTR VkResult (*func)(InTypeA, InTypeB, uint32_t *, OutType *), InTypeA inDataA, InTypeB inDataB) {
     EXPAND_ENUM_ARGS(inDataA, inDataB);
 }
 
-}
+}  // namespace VK_UTILS
 
 END_NS_BACKEND
+
+template <>
+struct fmt::formatter<VkResult> : fmt::formatter<std::string_view> {
+    template <typename Context>
+    auto format(VkResult result, Context &ctx) const {
+        return fmt::formatter<std::string_view>::format(NS_BD::VK_UTILS::vk_result_string(result), ctx);
+    }
+};

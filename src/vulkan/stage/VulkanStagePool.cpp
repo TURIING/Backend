@@ -1,15 +1,16 @@
 #include "vulkan/stage/VulkanStagePool.h"
 
+#include "vulkan/VkDef.h"
+#include "vulkan/VkUtils.h"
+#include "vulkan/commands/VulkanCommands.h"
+#include "vulkan/utils/Conversion.h"
+#include "vulkan/utils/Image.h"
+
 #include "Utils/Debug.h"
 #include "Utils/Log.h"
 
 #include <algorithm>
 #include <utility>
-
-#include "vulkan/VkDef.h"
-#include "vulkan/commands/VulkanCommands.h"
-#include "vulkan/utils/Conversion.h"
-#include "vulkan/utils/Image.h"
 
 BEGIN_NS_BACKEND
 
@@ -205,7 +206,7 @@ VulkanStageBufferPtr VulkanStagePool::allocateNewStage(uint32_t capacity) noexce
     if (result != VK_SUCCESS) {
         LOG_ERROR("VulkanStagePool - failed to allocate a staging buffer of size {}, error: {}", capacity, result);
     } else {
-        LOG_DEBUG("VulkanStagePool - allocated a staging buffer {} of size {}", buffer, capacity);
+        LOG_DEBUG("VulkanStagePool - allocated a staging buffer {} of size {}", static_cast<void const *>(buffer), capacity);
     }
 #endif
 

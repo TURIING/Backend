@@ -1,6 +1,7 @@
 #include "vulkan/buffer/VulkanBufferCache.h"
 
 #include "vulkan/VkDef.h"
+#include "vulkan/VkUtils.h"
 
 #include "Utils/Log.h"
 
@@ -64,7 +65,8 @@ void VulkanBufferCache::Gc() noexcept {
             if (poolIter->second.lastAccessed < evictionTime) {
 #if BVK_ENABLED(BVK_DEBUG_VULKAN_BUFFER_CACHE)
                 LOG_DEBUG("VulkanBufferCache - Destroyed vkBuffer {} with binding {}",
-                          poolIter->second.gpuBuffer->vkbuffer, static_cast<int>(poolIter->second.gpuBuffer->binding));
+                          static_cast<void const *>(poolIter->second.gpuBuffer->vkbuffer),
+                          static_cast<int>(poolIter->second.gpuBuffer->binding));
 #endif
                 Destroy(poolIter->second.gpuBuffer);
                 poolIter = bufferPool.erase(poolIter);
@@ -124,7 +126,7 @@ VulkanGpuBuffer const* VulkanBufferCache::Allocate(VulkanBufferBinding binding, 
                   numBytes, static_cast<int>(binding), result);
     } else {
         LOG_DEBUG("VulkanBufferCache - allocated a vkBuffer {} of size {} and binding {} successfully",
-                  gpuBuffer->vkbuffer, numBytes, static_cast<int>(binding));
+                  static_cast<void const *>(gpuBuffer->vkbuffer), numBytes, static_cast<int>(binding));
     }
 #endif
 

@@ -12,7 +12,7 @@ VulkanStageBuffer::~VulkanStageBuffer() {
     vmaDestroyBuffer(m_allocator, m_vkbuffer, m_memory);
 
 #if BVK_ENABLED(BVK_DEBUG_STAGING_ALLOCATION)
-    LOG_DEBUG("VulkanStageBuffer - destroyed a staging buffer {} of size {}", m_vkbuffer, m_capacity);
+    LOG_DEBUG("VulkanStageBuffer - destroyed a staging buffer {} of size {}", static_cast<void const *>(m_vkbuffer), m_capacity);
 #endif
 }
 
