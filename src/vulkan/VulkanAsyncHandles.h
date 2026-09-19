@@ -50,23 +50,22 @@ private:
 
 // VkShaderModule 的持有者。
 //
-// 继承 ThreadSafeResource：并行预编译时引用计数会在编译线程上变化，若在编译线程直接析构
-// 会让 VkShaderModule 在管线创建中途失效；经线程安全 GC 队列回到 backend 线程销毁即无此
-// 问题。所有其它调用仍假定来自 backend 线程。
-struct VulkanProgram : public HwProgram, public ThreadSafeResource {
+struct VulkanProgram : public HwProgram, public Resource {
     VulkanProgram(VkDevice device, Program const& builder) noexcept;
     ~VulkanProgram() override;
 
     // 置位后，尚未执行的并行预编译任务据此跳过
     void CancelParallelCompilation() { m_parallelCompilationCanceled.store(true, std::memory_order_release); }
 
-    NODISCARD bool IsParallelCompilationCanceled() const { return m_parallelCompilationCanceled.load(std::memory_order_acquire); }
+    NODISCARD bool IsParallelCompilationCanceled() const {
+        return m_parallelCompilationCanceled.load(std::memory_order_acquire);
+    }
 
     // 用已确定的布局写出全部排队中的 push constant
     void FlushPushConstants(VkPipelineLayout layout);
 
-    void WritePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout, ShaderStage stage,
-                           uint8_t index, PushConstantVariant const& value);
+    void WritePushConstant(VkCommandBuffer cmdbuf, VkPipelineLayout layout, ShaderStage stage, uint8_t index,
+                           PushConstantVariant const& value);
 
     NODISCARD VkShaderModule GetVertexShader() const { return m_info->shaders[0]; }
 
@@ -74,7 +73,9 @@ struct VulkanProgram : public HwProgram, public ThreadSafeResource {
 
     NODISCARD uint32_t GetPushConstantRangeCount() const { return m_info->pushConstantDescription.GetVkRangeCount(); }
 
-    NODISCARD VkPushConstantRange const* GetPushConstantRanges() const { return m_info->pushConstantDescription.GetVkRanges(); }
+    NODISCARD VkPushConstantRange const* GetPushConstantRanges() const {
+        return m_info->pushConstantDescription.GetVkRanges();
+    }
 
     // 前端到后端的着色器顺序是顶点、片元、计算，本项目只创建前两个
     static constexpr uint8_t kMaxShaderModules = 2;
@@ -83,30 +84,32 @@ private:
     struct PipelineInfo {
         explicit PipelineInfo(Program const& program) noexcept : pushConstantDescription(program) {}
 
-        VkShaderModule         shaders[kMaxShaderModules] = { VK_NULL_HANDLE };
+        VkShaderModule          shaders[kMaxShaderModules] = { VK_NULL_HANDLE };
         PushConstantDescription pushConstantDescription;
     };
 
     struct PushConstantInfo {
-        VkCommandBuffer       cmdbuf;
-        ShaderStage           stage;
-        uint8_t               index;
-        PushConstantVariant   value;
+        VkCommandBuffer     cmdbuf;
+        ShaderStage         stage;
+        uint8_t             index;
+        PushConstantVariant value;
     };
 
-    PipelineInfo*             m_info;
-    VkDevice                  m_device = VK_NULL_HANDLE;
-    std::atomic<bool>         m_parallelCompilationCanceled{ false };
+    PipelineInfo*                 m_info;
+    VkDevice                      m_device = VK_NULL_HANDLE;
+    std::atomic<bool>             m_parallelCompilationCanceled{ false };
     std::vector<PushConstantInfo> m_queuedPushConstants;
 };
 DECLARE_SHARE_PTR_CLASS(VulkanProgram);
 
-struct VulkanFence : public HwFence, public ThreadSafeResource {
+struct VulkanFence : public HwFence, public Resource {
     VulkanFence() = default;
 
     void SetFence(std::shared_ptr<VulkanCmdFence> fence) { m_sharedFence = std::move(fence); }
 
-    NODISCARD std::pair<std::shared_ptr<VulkanCmdFence>, bool> GetStatus() const { return { m_sharedFence, m_canceled }; }
+    NODISCARD std::pair<std::shared_ptr<VulkanCmdFence>, bool> GetStatus() const {
+        return { m_sharedFence, m_canceled };
+    }
 
     void Cancel() const {
         if (m_sharedFence) {
@@ -122,7 +125,7 @@ private:
 DECLARE_SHARE_PTR_CLASS(VulkanFence);
 
 // HwSync 的平台侧对象在创建时可能尚未就绪：转换回调先入队，待平台同步对象就绪后再派发
-struct VulkanSync : public ThreadSafeResource, public HwSync {
+struct VulkanSync : public Resource, public HwSync {
     struct CallbackData {
         CallbackHandler*       handler;
         Platform::SyncCallback cb;
@@ -135,15 +138,17 @@ struct VulkanSync : public ThreadSafeResource, public HwSync {
     // 与平台同步对象的创建/转换回调入队互斥
     NODISCARD std::mutex& GetLock() noexcept { return m_lock; }
 
-    NODISCARD std::vector<std::unique_ptr<CallbackData>>& GetConversionCallbacks() noexcept { return m_conversionCallbacks; }
+    NODISCARD std::vector<std::unique_ptr<CallbackData>>& GetConversionCallbacks() noexcept {
+        return m_conversionCallbacks;
+    }
 
 private:
-    std::mutex                                        m_lock;
-    std::vector<std::unique_ptr<CallbackData>>        m_conversionCallbacks;
+    std::mutex                                 m_lock;
+    std::vector<std::unique_ptr<CallbackData>> m_conversionCallbacks;
 };
 DECLARE_SHARE_PTR_CLASS(VulkanSync);
 
-struct VulkanTimerQuery : public HwTimerQuery, public ThreadSafeResource {
+struct VulkanTimerQuery : public HwTimerQuery, public Resource {
     VulkanTimerQuery(uint32_t startingIndex, uint32_t stoppingIndex)
         : m_startingQueryIndex(startingIndex), m_stoppingQueryIndex(stoppingIndex) {}
 

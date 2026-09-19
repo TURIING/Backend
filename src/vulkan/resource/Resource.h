@@ -65,7 +65,7 @@ std::string_view TransResourceTypeToStr(ResourceType type);
 // 该类型的销毁须经线程安全队列入队。
 //
 // 分类依据是运行期的 ResourceType 而非模板参数 —— Resource::OnLastRef() 只拿得到 m_type。
-// 新增线程安全类型时，此处与类型定义处的 ThreadSafeResource 基类必须成对出现。
+// 新增线程安全类型时，此处与类型定义处的 Resource 基类必须成对出现。
 constexpr bool IsThreadSafeType(ResourceType type) noexcept {
     switch (type) {
         CASE_FROM_TO(ResourceType::Program, true)
@@ -78,7 +78,8 @@ constexpr bool IsThreadSafeType(ResourceType type) noexcept {
 }
 
 struct Resource : public NS_UTILS::Ref {
-    Resource() : m_resManager(nullptr), m_id(HandleBase::kNullId), m_type(ResourceType::UndefinedType), m_destroyed(false) {}
+    Resource()
+        : m_resManager(nullptr), m_id(HandleBase::kNullId), m_type(ResourceType::UndefinedType), m_destroyed(false) {}
 
     template <typename D>
     NODISCARD bool IsType() const {
@@ -117,12 +118,6 @@ private:
     friend class ResourceManager;
 };
 DECLARE_SHARE_PTR_CLASS(Resource);
-
-// 语义标记：该类型的引用归零可能发生在非 backend 线程（如编译线程），故销毁须入独立队列
-//
-// 不引入第二套引用计数 —— NS_UTILS::Ref 已用 std::atomic<int32_t> 计数；也不重写
-// OnLastRef()，归零动作仍由 Resource 统一处理，入哪个队列由 IsThreadSafeType 决定
-struct ThreadSafeResource : public Resource {};
 
 template <>
 ResourceType Resource::GetTypeEnum<VulkanBuffer>() const noexcept;
