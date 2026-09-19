@@ -1,5 +1,8 @@
 #include "VulLogicDevice.h"
 
+#include "Utils/Log.h"
+#include "Utils/Macro.h"
+
 #include <vector>
 
 #include "../VkDef.h"
@@ -11,45 +14,37 @@ namespace {
 
 VkQueueGlobalPriorityKHR GetVkQueueGlobalPriority(GpuContextPriority priority) {
     switch (priority) {
-        case GpuContextPriority::Low:
-            return VK_QUEUE_GLOBAL_PRIORITY_LOW_KHR;
-        case GpuContextPriority::Medium:
-            return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
-        case GpuContextPriority::High:
-            return VK_QUEUE_GLOBAL_PRIORITY_HIGH_KHR;
-        case GpuContextPriority::Realtime:
-            return VK_QUEUE_GLOBAL_PRIORITY_REALTIME_KHR;
-        case GpuContextPriority::Default:
-            return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
+        CASE_FROM_TO(GpuContextPriority::Low, VK_QUEUE_GLOBAL_PRIORITY_LOW_KHR);
+        CASE_FROM_TO(GpuContextPriority::Medium, VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR);
+        CASE_FROM_TO(GpuContextPriority::High, VK_QUEUE_GLOBAL_PRIORITY_HIGH_KHR);
+        CASE_FROM_TO(GpuContextPriority::Realtime, VK_QUEUE_GLOBAL_PRIORITY_REALTIME_KHR);
+        CASE_FROM_TO(GpuContextPriority::Default, VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR);
     }
     return VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
 }
 
-}
+}  // namespace
 
-// Builder 配置数据
 struct VulLogicDevice::BuilderDetails {
-    VulPhysicalDevicePtr m_physicalDevice;
-    std::unordered_set<std::string> m_deviceExtensions;
-    VkPhysicalDeviceFeatures m_features             = {};
-    VkPhysicalDeviceVulkan11Features m_vk11Features = {};
-    bool m_protectedQueue = false;
-    MiscDeviceFeatures m_requestedFeatures;
-    DeviceCreator      m_deviceCreator;
+    VulPhysicalDevicePtr             m_physicalDevice;
+    std::unordered_set<std::string>  m_deviceExtensions;
+    VkPhysicalDeviceFeatures         m_features       = {};
+    VkPhysicalDeviceVulkan11Features m_vk11Features   = {};
+    bool                             m_protectedQueue = false;
+    ExtraDeviceFeatures              m_requestedFeatures;
+    DeviceCreator                    m_deviceCreator;
 };
 
-VulLogicDevice::Builder::Builder() noexcept = default;
+VulLogicDevice::Builder::Builder() noexcept  = default;
 VulLogicDevice::Builder::~Builder() noexcept = default;
 
-VulLogicDevice::VulLogicDevice(VkDevice device, bool shared,
-                               uint32_t graphicsQueueFamilyIndex, uint32_t graphicsQueueIndex,
-                               uint32_t protectedGraphicsQueueFamilyIndex,
-                               uint32_t protectedGraphicsQueueIndex)
-    : m_graphicsQueueFamilyIndex(graphicsQueueFamilyIndex)
-    , m_graphicsQueueIndex(graphicsQueueIndex)
-    , m_protectedGraphicsQueueFamilyIndex(protectedGraphicsQueueFamilyIndex)
-    , m_protectedGraphicsQueueIndex(protectedGraphicsQueueIndex)
-    , m_shared(shared) {
+VulLogicDevice::VulLogicDevice(VkDevice device, bool shared, uint32_t graphicsQueueFamilyIndex, uint32_t graphicsQueueIndex,
+                               uint32_t protectedGraphicsQueueFamilyIndex, uint32_t protectedGraphicsQueueIndex)
+    : m_graphicsQueueFamilyIndex(graphicsQueueFamilyIndex),
+      m_graphicsQueueIndex(graphicsQueueIndex),
+      m_protectedGraphicsQueueFamilyIndex(protectedGraphicsQueueFamilyIndex),
+      m_protectedGraphicsQueueIndex(protectedGraphicsQueueIndex),
+      m_shared(shared) {
     m_pHandle = device;
 }
 
@@ -60,26 +55,22 @@ VulLogicDevice::~VulLogicDevice() {
     }
 }
 
-VulLogicDevice::Builder &VulLogicDevice::Builder::SetPhysicalDevice(
-        VulPhysicalDevicePtr device) noexcept {
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetPhysicalDevice(VulPhysicalDevicePtr device) noexcept {
     m_pImpl->m_physicalDevice = std::move(device);
     return *this;
 }
 
-VulLogicDevice::Builder &VulLogicDevice::Builder::SetDeviceExtensions(
-        std::unordered_set<std::string> const &exts) noexcept {
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetDeviceExtensions(std::unordered_set<std::string> const &exts) noexcept {
     m_pImpl->m_deviceExtensions = exts;
     return *this;
 }
 
-VulLogicDevice::Builder &VulLogicDevice::Builder::SetFeatures(
-        VkPhysicalDeviceFeatures const &features) noexcept {
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetFeatures(VkPhysicalDeviceFeatures const &features) noexcept {
     m_pImpl->m_features = features;
     return *this;
 }
 
-VulLogicDevice::Builder &VulLogicDevice::Builder::SetVulkan11Features(
-        VkPhysicalDeviceVulkan11Features const &features) noexcept {
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetVulkan11Features(VkPhysicalDeviceVulkan11Features const &features) noexcept {
     m_pImpl->m_vk11Features = features;
     return *this;
 }
@@ -89,8 +80,7 @@ VulLogicDevice::Builder &VulLogicDevice::Builder::SetProtectedQueue(bool enabled
     return *this;
 }
 
-VulLogicDevice::Builder &VulLogicDevice::Builder::SetRequestedFeatures(
-        MiscDeviceFeatures const &features) noexcept {
+VulLogicDevice::Builder &VulLogicDevice::Builder::SetRequestedFeatures(ExtraDeviceFeatures const &features) noexcept {
     m_pImpl->m_requestedFeatures = features;
     return *this;
 }
@@ -102,20 +92,19 @@ VulLogicDevice::Builder &VulLogicDevice::Builder::SetDeviceCreator(DeviceCreator
 
 VulLogicDevicePtr VulLogicDevice::Builder::Build() {
     // 识别并选择所需队列
-    uint32_t graphicsQueueFamilyIndex = VK_UTILS::IdentifyGraphicsQueueFamilyIndex(
-        m_pImpl->m_physicalDevice->GetHandle(), VK_QUEUE_GRAPHICS_BIT);
+    uint32_t graphicsQueueFamilyIndex = VK_UTILS::IdentifyGraphicsQueueFamilyIndex(m_pImpl->m_physicalDevice->GetHandle(), VK_QUEUE_GRAPHICS_BIT);
     LOG_ASSERT(graphicsQueueFamilyIndex != INVALID_VK_INDEX);
     uint32_t graphicsQueueIndex = 0;
 
     uint32_t protectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
     uint32_t protectedGraphicsQueueIndex       = INVALID_VK_INDEX;
     if (m_pImpl->m_protectedQueue) {
-        protectedGraphicsQueueFamilyIndex = VK_UTILS::IdentifyGraphicsQueueFamilyIndex(
-            m_pImpl->m_physicalDevice->GetHandle(), (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
+        protectedGraphicsQueueFamilyIndex =
+            VK_UTILS::IdentifyGraphicsQueueFamilyIndex(m_pImpl->m_physicalDevice->GetHandle(), (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_PROTECTED_BIT));
         protectedGraphicsQueueIndex = 0;
     }
 
-    float queuePriority[] = { 1.0f };
+    float              queuePriority[]  = { 1.0f };
     VkDeviceCreateInfo deviceCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     };
@@ -127,30 +116,28 @@ VulLogicDevicePtr VulLogicDevice::Builder::Build() {
         requestExtensions.push_back(ext.data());
     }
 
-    bool const requiresGpuPriority =
-        m_pImpl->m_requestedFeatures.gpuContextPriority != GpuContextPriority::Default;
+    bool const                               requiresGpuPriority     = m_pImpl->m_requestedFeatures.priority != GpuContextPriority::Default;
     VkDeviceQueueGlobalPriorityCreateInfoKHR queuePriorityCreateInfo = {
         .sType          = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR,
-        .globalPriority = GetVkQueueGlobalPriority(m_pImpl->m_requestedFeatures.gpuContextPriority),
+        .globalPriority = GetVkQueueGlobalPriority(m_pImpl->m_requestedFeatures.priority),
     };
 
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};
-    deviceQueueCreateInfo[0] = {
-        .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext            = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
-        .queueFamilyIndex = graphicsQueueFamilyIndex,
-        .queueCount       = 1,
-        .pQueuePriorities = &queuePriority[0],
+    deviceQueueCreateInfo[0]                         = {
+                                .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                                .pNext            = requiresGpuPriority ? &queuePriorityCreateInfo : nullptr,
+                                .queueFamilyIndex = graphicsQueueFamilyIndex,
+                                .queueCount       = 1,
+                                .pQueuePriorities = &queuePriority[0],
     };
     // protected 队列
-    deviceQueueCreateInfo[1] = deviceQueueCreateInfo[0];
+    deviceQueueCreateInfo[1]       = deviceQueueCreateInfo[0];
     deviceQueueCreateInfo[1].flags = VK_DEVICE_QUEUE_CREATE_PROTECTED_BIT;
 
-    bool const hasProtectedQueue = protectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
+    bool const hasProtectedQueue          = protectedGraphicsQueueFamilyIndex != INVALID_VK_INDEX;
     deviceCreateInfo.queueCreateInfoCount = hasProtectedQueue ? 2 : 1;
     deviceCreateInfo.pQueueCreateInfos    = deviceQueueCreateInfo;
 
-    // 只启用我们需要的特性
     VkPhysicalDeviceFeatures enabledFeatures = {
         .depthClamp             = m_pImpl->m_features.depthClamp,
         .samplerAnisotropy      = m_pImpl->m_features.samplerAnisotropy,
@@ -219,15 +206,11 @@ VulLogicDevicePtr VulLogicDevice::Builder::Build() {
         VK_UTILS::chainStruct(&deviceCreateInfo, &globalPriority);
     }
 
-    // 创建动作由平台注入，设备的错误处理与兜底也由平台负责
-    if (!m_pImpl->m_deviceCreator) {
-        LOG_CRITICAL("Vulkan device creator is not set");
-    }
+    LOG_ASSERT(m_pImpl->m_deviceCreator);
     VkDevice device = m_pImpl->m_deviceCreator(deviceCreateInfo);
 
-    return VulLogicDevicePtr(new VulLogicDevice(device, /*shared=*/false,
-        graphicsQueueFamilyIndex, graphicsQueueIndex,
-        protectedGraphicsQueueFamilyIndex, protectedGraphicsQueueIndex));
+    return new VulLogicDevice(device, false, graphicsQueueFamilyIndex, graphicsQueueIndex, protectedGraphicsQueueFamilyIndex,
+                              protectedGraphicsQueueIndex);
 }
 
 END_NS_BACKEND

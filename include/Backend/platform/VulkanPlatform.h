@@ -59,7 +59,6 @@ public:
         std::vector<ExternalYcbcrFormat> pipelineCachePrewarmExternalFormats;
     };
 
-    // 交换链句柄同时用作标识
     using SwapChainPtr = Platform::SwapChain *;
 
     // 构成交换链的图像集合及其格式、尺寸
@@ -92,25 +91,13 @@ public:
      * @brief 返回交换链所需的实例扩展（如 Apple 平台的 VK_EXT_metal_surface）
      */
     virtual ExtensionSet GetSwapchainInstanceExtensions() const = 0;
-
-    // 供 driver 创建 VMA allocator 等需要原生句柄的场景使用
     NODISCARD VkInstance GetVkInstance() const noexcept;
     NODISCARD VkPhysicalDevice GetVkPhysicalDevice() const noexcept;
     NODISCARD VkDevice GetVkDevice() const noexcept;
-
-    // 供命令录制层构造 VulkanCommands 使用
     NODISCARD uint32_t GetGraphicsQueueFamilyIndex() const noexcept;
     NODISCARD uint32_t GetGraphicsQueueIndex() const noexcept;
     NODISCARD VkQueue GetVkGraphicsQueue() const noexcept;
-
-    /**
-     * @brief 返回始终需要启用的实例扩展（默认无）
-     */
     virtual ExtensionSet GetRequiredInstanceExtensions() { return {}; }
-
-    /**
-     * @brief 返回平台定制项（GPU 偏好等）
-     */
     virtual Customization GetCustomization() const noexcept { return {}; }
 
     /**
@@ -205,19 +192,19 @@ protected:
 private:
     // createLogicalDevice 请求的设备特性集合
     struct MiscDeviceFeatures {
-        bool               dynamicRendering     = false; //!< 允许创建无 render pass 的 VkGraphicsPipeline
-        bool               imageView2Don3DImage = false; //!< 允许从 3D VkImage 创建 2D image view
+        bool               dynamicRendering     = false;  //!< 允许创建无 render pass 的 VkGraphicsPipeline
+        bool               imageView2Don3DImage = false;  //!< 允许从 3D VkImage 创建 2D image view
         GpuContextPriority gpuContextPriority   = GpuContextPriority::Default;
     };
 
-    void         initRuntime(void *shareContext);
+    void initRuntime(void *shareContext);
     ExtensionSet initInstance();
-    void         selectPhysicalDevice(void *shareContext);
+    void selectPhysicalDevice(void *shareContext);
     ExtensionSet initDeviceExtensions(DriverConfig const &config, ExtensionSet &instExts);
-    void         createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
-    void         initQueues();
-    void         queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
-                                           void *sharedContext) noexcept;
+    void createLogicalDevice(DriverConfig const &config, ExtensionSet &instExts, void *shareContext);
+    void initQueues();
+    void queryAndSetDeviceFeatures(DriverConfig const &driverConfig, ExtensionSet const &instExts, ExtensionSet const &deviceExts,
+                                   void *sharedContext) noexcept;
 };
 DECLARE_SHARE_PTR_CLASS(VulkanPlatform);
 

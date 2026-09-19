@@ -8,6 +8,7 @@ template <class T>
 class VulObject : public NS_UTILS::Ref {
 public:
     NODISCARD T GetHandle() const { return m_pHandle; }
+    T operator*() { return m_pHandle; }
 
 protected:
     T m_pHandle = nullptr;

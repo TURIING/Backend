@@ -9,14 +9,13 @@
 BEGIN_NS_BACKEND
 
 class VulPhysicalDevice;
-DECLARE_SHARE_PTR_CLASS(VulPhysicalDevice);  // 前置声明 Ptr（Builder::Build 返回类型需要）
+DECLARE_SHARE_PTR_CLASS(VulPhysicalDevice);
 
 // VkPhysicalDevice 封装：物理设备不销毁
 class VulPhysicalDevice final : public VulObject<VkPhysicalDevice> {
     struct BuilderDetails;
 
 public:
-    // 创建信息（Builder 模式）
     class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct VulPhysicalDevice::BuilderDetails;
 

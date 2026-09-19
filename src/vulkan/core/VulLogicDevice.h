@@ -11,24 +11,21 @@
 BEGIN_NS_BACKEND
 
 class VulLogicDevice;
-DECLARE_SHARE_PTR_CLASS(VulLogicDevice);  // 前置声明 Ptr（Builder::Build 返回类型需要）
+DECLARE_SHARE_PTR_CLASS(VulLogicDevice);
 
-// VkDevice 封装：非共享逻辑设备析构时自动销毁
 class VulLogicDevice final : public VulObject<VkDevice> {
     struct BuilderDetails;
 
 public:
-    // 实际的 vkCreateDevice 由平台注入，使平台子类可覆写设备创建而不必重写初始化流程
     using DeviceCreator = std::function<VkDevice(VkDeviceCreateInfo const &)>;
 
     // 创建设备时应请求的额外特性
-    struct MiscDeviceFeatures {
-        bool dynamicRendering        = false; // 允许创建无 render pass 的 VkGraphicsPipeline
-        bool imageView2Don3DImage    = false; // 允许从 3D VkImage 创建 2D image view
-        GpuContextPriority gpuContextPriority = GpuContextPriority::Default;
+    struct ExtraDeviceFeatures {
+        bool               dynamicRendering     = false;  // 允许创建无 render pass 的 VkGraphicsPipeline
+        bool               imageView2Don3DImage = false;  // 允许从 3D VkImage 创建 2D image view
+        GpuContextPriority priority             = GpuContextPriority::Default;
     };
 
-    // 创建信息（Builder 模式）
     class Builder : public NS_UTILS::BuilderBase<BuilderDetails> {
         friend struct VulLogicDevice::BuilderDetails;
 
@@ -40,25 +37,19 @@ public:
         Builder &SetFeatures(VkPhysicalDeviceFeatures const &features) noexcept;
         Builder &SetVulkan11Features(VkPhysicalDeviceVulkan11Features const &features) noexcept;
         Builder &SetProtectedQueue(bool enabled) noexcept;
-        Builder &SetRequestedFeatures(MiscDeviceFeatures const &features) noexcept;
+        Builder &SetRequestedFeatures(ExtraDeviceFeatures const &features) noexcept;
         Builder &SetDeviceCreator(DeviceCreator creator) noexcept;
         VulLogicDevicePtr Build();
     };
 
-    explicit VulLogicDevice(VkDevice device, bool shared,
-                            uint32_t graphicsQueueFamilyIndex, uint32_t graphicsQueueIndex,
-                            uint32_t protectedGraphicsQueueFamilyIndex,
-                            uint32_t protectedGraphicsQueueIndex);
+    explicit VulLogicDevice(VkDevice device, bool shared, uint32_t graphicsQueueFamilyIndex, uint32_t graphicsQueueIndex,
+                            uint32_t protectedGraphicsQueueFamilyIndex, uint32_t protectedGraphicsQueueIndex);
     ~VulLogicDevice() override;
 
     uint32_t GetGraphicsQueueFamilyIndex() const noexcept { return m_graphicsQueueFamilyIndex; }
     uint32_t GetGraphicsQueueIndex() const noexcept { return m_graphicsQueueIndex; }
-    uint32_t GetProtectedGraphicsQueueFamilyIndex() const noexcept {
-        return m_protectedGraphicsQueueFamilyIndex;
-    }
-    uint32_t GetProtectedGraphicsQueueIndex() const noexcept {
-        return m_protectedGraphicsQueueIndex;
-    }
+    uint32_t GetProtectedGraphicsQueueFamilyIndex() const noexcept { return m_protectedGraphicsQueueFamilyIndex; }
+    uint32_t GetProtectedGraphicsQueueIndex() const noexcept { return m_protectedGraphicsQueueIndex; }
 
 private:
     uint32_t m_graphicsQueueFamilyIndex          = INVALID_VK_INDEX;

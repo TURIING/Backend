@@ -1,5 +1,7 @@
 #include "VulInstance.h"
 
+#include "Utils/Log.h"
+
 #include <cstring>
 #include <string_view>
 #include <vector>
@@ -21,8 +23,7 @@ constexpr std::string_view kDesiredLayers[] = {
 };
 
 std::vector<const char *> GetEnabledLayers() {
-    std::vector<VkLayerProperties> const availableLayers =
-        VK_UTILS::enumerate(vkEnumerateInstanceLayerProperties);
+    std::vector<VkLayerProperties> const availableLayers = VK_UTILS::enumerate(vkEnumerateInstanceLayerProperties);
 
     std::vector<const char *> enabledLayers;
     enabledLayers.reserve(sizeof(kDesiredLayers) / sizeof(kDesiredLayers[0]));
@@ -39,9 +40,8 @@ std::vector<const char *> GetEnabledLayers() {
 }
 #endif  // BVK_ENABLED(BVK_DEBUG_VALIDATION)
 
-}
+}  // namespace
 
-// Builder 配置数据
 struct VulInstance::BuilderDetails {
     VkApplicationInfo m_appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -68,19 +68,16 @@ VulInstance::Builder::Builder() noexcept {
     m_pImpl->m_appInfo = {
         .sType       = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pEngineName = "Backend",
-        .apiVersion  = VK_MAKE_API_VERSION(0, kRequiredVulkanVersionMajor,
-                                           kRequiredVulkanVersionMinor, 0),
+        .apiVersion  = VK_MAKE_API_VERSION(0, kRequiredVulkanVersionMajor, kRequiredVulkanVersionMinor, 0),
     };
 }
 
-VulInstance::Builder &VulInstance::Builder::SetApplicationInfo(
-        VkApplicationInfo const &appInfo) noexcept {
+VulInstance::Builder &VulInstance::Builder::SetApplicationInfo(VkApplicationInfo const &appInfo) noexcept {
     m_pImpl->m_appInfo = appInfo;
     return *this;
 }
 
-VulInstance::Builder &VulInstance::Builder::SetRequiredExtensions(
-        std::unordered_set<std::string> const &exts) noexcept {
+VulInstance::Builder &VulInstance::Builder::SetRequiredExtensions(std::unordered_set<std::string> const &exts) noexcept {
     m_pImpl->m_requiredExts = exts;
     return *this;
 }
@@ -122,8 +119,8 @@ VulInstancePtr VulInstance::Builder::Build() {
 
     // Platform 可要求 1~2 个实例扩展，加上这里的公共代码最多 8 个
     constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
-    char const *ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
-    uint32_t enabledExtensionCount = 0;
+    char const        *ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
+    uint32_t           enabledExtensionCount = 0;
 
     if (validationFeaturesSupported) {
         ppEnabledExtensions[enabledExtensionCount++] = VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME;
@@ -145,20 +142,17 @@ VulInstancePtr VulInstance::Builder::Build() {
         VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
     };
     VkValidationFeaturesEXT features = {
-        .sType                        = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
+        .sType                         = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
         .enabledValidationFeatureCount = sizeof(enables) / sizeof(enables[0]),
-        .pEnabledValidationFeatures   = enables,
+        .pEnabledValidationFeatures    = enables,
     };
     if (validationFeaturesSupported) {
         VK_UTILS::chainStruct(&instanceCreateInfo, &features);
     }
 
-    // 创建动作由平台注入，实例的错误处理与兜底也由平台负责
-    if (!m_pImpl->m_instanceCreator) {
-        LOG_CRITICAL("Vulkan instance creator is not set");
-    }
+    LOG_ASSERT(m_pImpl->m_instanceCreator);
     VkInstance instance = m_pImpl->m_instanceCreator(instanceCreateInfo);
-    return VulInstancePtr(new VulInstance(instance));
+    return new VulInstance(instance);
 }
 
 END_NS_BACKEND

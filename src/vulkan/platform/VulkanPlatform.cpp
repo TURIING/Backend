@@ -115,9 +115,8 @@ ExtensionSet getDeviceExtensions(VulPhysicalDevicePtr const &device) {
 #endif
     };
 
-    ExtensionSet                             exts;
-    std::vector<VkExtensionProperties> const extensions =
-        VK_UTILS::enumerate(vkEnumerateDeviceExtensionProperties, device->GetHandle(), static_cast<char const *>(nullptr) /* pLayerName */);
+    ExtensionSet exts;
+    auto const   extensions = VK_UTILS::enumerate(vkEnumerateDeviceExtensionProperties, device->GetHandle(), static_cast<char const *>(nullptr));
     for (auto const &extension : extensions) {
         std::string name(reinterpret_cast<char const *>(extension.extensionName));
 
@@ -220,14 +219,12 @@ struct VulkanPlatformPrivate {
     VulLogicDevicePtr    m_pDevice;
     VulQueuePtr          m_pGraphicsQueue;
     VulQueuePtr          m_pProtectedGraphicsQueue;
-
-    uint32_t m_graphicsQueueFamilyIndex          = INVALID_VK_INDEX;
-    uint32_t m_graphicsQueueIndex                = INVALID_VK_INDEX;
-    uint32_t m_protectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
-    uint32_t m_protectedGraphicsQueueIndex       = INVALID_VK_INDEX;
-
-    VulkanContextPtr m_pContext      = {};
-    bool             m_sharedContext = false;
+    VulkanContextPtr     m_pContext                          = {};
+    uint32_t             m_graphicsQueueFamilyIndex          = INVALID_VK_INDEX;
+    uint32_t             m_graphicsQueueIndex                = INVALID_VK_INDEX;
+    uint32_t             m_protectedGraphicsQueueFamilyIndex = INVALID_VK_INDEX;
+    uint32_t             m_protectedGraphicsQueueIndex       = INVALID_VK_INDEX;
+    bool                 m_sharedContext                     = false;
 };
 
 VulkanPlatform::VulkanPlatform() noexcept  = default;
@@ -250,7 +247,7 @@ VkQueue VulkanPlatform::GetVkGraphicsQueue() const noexcept {
 DriverPtr VulkanPlatform::CreateDriver(const DriverConfig &config, void *shareContext) {
     initRuntime(shareContext);
 
-    m_pImpl->m_pContext = VulkanContextPtr(new VulkanContext());
+    m_pImpl->m_pContext = new VulkanContext();
 
     ExtensionSet instExts = initInstance();
     selectPhysicalDevice(shareContext);
@@ -278,8 +275,8 @@ VulkanPlatform::SwapChainPtr VulkanPlatform::CreateSwapChain(void *nativeWindow,
 
     auto [surface, fallbackExtent] = CreateVkSurfaceKHR(nativeWindow, GetVkInstance(), flags);
     // surface 的所有权随交换链转移，由其析构时销毁
-    return new VulkanPlatformSurfaceSwapChain(*m_pImpl->m_pContext, GetVkPhysicalDevice(), GetVkDevice(), GetVkGraphicsQueue(),
-                                             GetVkInstance(), surface, fallbackExtent, flags);
+    return new VulkanPlatformSurfaceSwapChain(*m_pImpl->m_pContext, GetVkPhysicalDevice(), GetVkDevice(), GetVkGraphicsQueue(), GetVkInstance(),
+                                              surface, fallbackExtent, flags);
 }
 
 VulkanPlatform::SwapChainBundle VulkanPlatform::GetSwapChainBundle(SwapChainPtr handle) {
@@ -324,9 +321,7 @@ VkResult VulkanPlatform::Recreate(SwapChainPtr handle) {
     return static_cast<VulkanPlatformSwapChainBase *>(handle)->Recreate();
 }
 
-void VulkanPlatform::Destroy(SwapChainPtr handle) {
-    delete static_cast<VulkanPlatformSwapChainBase *>(handle);
-}
+void VulkanPlatform::Destroy(SwapChainPtr handle) { delete static_cast<VulkanPlatformSwapChainBase *>(handle); }
 
 Platform::Sync *VulkanPlatform::CreateSync(std::shared_ptr<VulkanCmdFence> fenceStatus) noexcept {
     auto *sync        = new VulkanSync();
@@ -350,10 +345,7 @@ void VulkanPlatform::Terminate() {
 
 VkInstance VulkanPlatform::CreateVkInstance(VkInstanceCreateInfo const &createInfo) noexcept {
     VkInstance instance = VK_NULL_HANDLE;
-    VkResult   result   = vkCreateInstance(&createInfo, kVkAlloc, &instance);
-    if (result != VK_SUCCESS) {
-        LOG_CRITICAL("Unable to create Vulkan instance. error={}", static_cast<int32_t>(result));
-    }
+    CALL_VK(vkCreateInstance(&createInfo, kVkAlloc, &instance));
     return instance;
 }
 
@@ -378,7 +370,6 @@ void VulkanPlatform::initRuntime(void *shareContext) {
 
     if (shareContext) {
         VulkanSharedContext const *scontext = static_cast<VulkanSharedContext const *>(shareContext);
-        // VulkanSharedContext 的所有字段都应存在
         LOG_ASSERT(scontext->instance != VK_NULL_HANDLE);
         LOG_ASSERT(scontext->physicalDevice != VK_NULL_HANDLE);
         LOG_ASSERT(scontext->logicalDevice != VK_NULL_HANDLE);
@@ -405,7 +396,6 @@ ExtensionSet VulkanPlatform::initInstance() {
         instExts.merge(GetRequiredInstanceExtensions());
     }
     if (!m_pImpl->m_pInstance) {
-        // 实例的创建经可覆写钩子，子类无需重写整个初始化流程
         m_pImpl->m_pInstance = VulInstance::Builder()
                                    .SetRequiredExtensions(instExts)
                                    .SetInstanceCreator([this](VkInstanceCreateInfo const &createInfo) { return CreateVkInstance(createInfo); })
@@ -424,8 +414,7 @@ void VulkanPlatform::selectPhysicalDevice(void *shareContext) {
     LOG_ASSERT(!(hasGPUPreference && shareContext));
 
     if (!m_pImpl->m_pPhysicalDevice) {
-        m_pImpl->m_pPhysicalDevice = VulPhysicalDevicePtr(
-            new VulPhysicalDevice(SelectVkPhysicalDevice(m_pImpl->m_pInstance->GetHandle())));
+        m_pImpl->m_pPhysicalDevice = new VulPhysicalDevice(SelectVkPhysicalDevice(m_pImpl->m_pInstance->GetHandle()));
     }
     LOG_ASSERT(m_pImpl->m_pPhysicalDevice);
 
@@ -467,10 +456,10 @@ void VulkanPlatform::createLogicalDevice(DriverConfig const &config, ExtensionSe
         }
 
         // 逻辑设备侧的构造参数同构但归属私有层，此处显式转换以维持分层
-        VulLogicDevice::MiscDeviceFeatures const deviceFeatures = {
+        VulLogicDevice::ExtraDeviceFeatures const deviceFeatures = {
             .dynamicRendering     = requestedFeatures.dynamicRendering,
             .imageView2Don3DImage = requestedFeatures.imageView2Don3DImage,
-            .gpuContextPriority   = requestedFeatures.gpuContextPriority,
+            .priority             = requestedFeatures.gpuContextPriority,
         };
 
         m_pImpl->m_pDevice = VulLogicDevice::Builder()
@@ -630,10 +619,9 @@ void VulkanPlatform::queryAndSetDeviceFeatures(DriverConfig const &driverConfig,
         }
     }
 
-    context.m_depthClampSupported   = context.m_physicalDeviceFeatures.features.depthClamp == VK_TRUE;
-    context.m_clipDistanceSupported = context.m_physicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
-    context.m_imageCubeArraySupported =
-            context.m_physicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
+    context.m_depthClampSupported     = context.m_physicalDeviceFeatures.features.depthClamp == VK_TRUE;
+    context.m_clipDistanceSupported   = context.m_physicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
+    context.m_imageCubeArraySupported = context.m_physicalDeviceFeatures.features.imageCubeArray == VK_TRUE;
 
     context.m_isUnifiedMemoryArchitecture  = hasUnifiedMemoryArchitecture(context.m_memoryProperties);
     context.m_depthStencilFormats          = findAttachmentDepthStencilFormats(m_pImpl->m_pPhysicalDevice);
