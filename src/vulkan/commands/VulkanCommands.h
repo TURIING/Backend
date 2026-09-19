@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Backend/DriverDefine.h"
+#include "Backend/platform/VulkanPlatform.h"
 
 #include "Utils/Utils.h"
 
@@ -24,9 +25,9 @@ BEGIN_NS_BACKEND
 // - 允许注入一个外部依赖信号量（如交换链图像获取），暂停下一次提交
 // - 允许取走最近一次提交的完成信号量（供 vkQueuePresentKHR 使用）
 // - 围栏状态可在非渲染线程查询：提交线程经 UpdateFences 把状态搬进围栏对象
-class VulkanCommands {
+class VulkanCommands : public NS_UTILS::Ref {
 public:
-    VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex, const VulkanContextPtr &context,
+    VulkanCommands(const VulkanPlatformPtr &platform, const VulkanContextPtr &context,
                    const VulkanSemaphoreManagerPtr &semaphoreManager);
 
     VulkanCommands(const VulkanCommands &)            = delete;
@@ -83,5 +84,7 @@ private:
 
     VkPipelineStageFlags m_injectedDependencyWaitStage = 0;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanCommands);
 
 END_NS_BACKEND

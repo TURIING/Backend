@@ -26,7 +26,7 @@ DECLARE_SHARE_PTR_CLASS(VulkanFramebuffer);
 //
 // VkFramebuffer 只是「渲染通道 + 一组图像视图」的绑定，两者都不占显存，故缓存的是对象
 // 本身而非离屏渲染表面。键的复用度直接决定渲染通道的创建次数。
-class VulkanFboCache {
+class VulkanFboCache : public NS_UTILS::Ref {
 public:
     constexpr static VulkanLayout kFinalColorAttachmentLayout        = VulkanLayout::COLOR_ATTACHMENT;
     constexpr static VulkanLayout kFinalResolveAttachmentLayout      = VulkanLayout::COLOR_ATTACHMENT;
@@ -156,5 +156,7 @@ private:
     // 缓存键里存的是由渲染目标纹理派生的图像视图，故必须让其纹理存活到本对象析构
     VulkanRenderTargetPtr m_renderTarget;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanFboCache);
 
 END_NS_BACKEND

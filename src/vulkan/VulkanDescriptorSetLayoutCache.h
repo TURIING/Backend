@@ -23,7 +23,7 @@ BEGIN_NS_BACKEND
 //
 // 缓存键是布局的位掩码描述而非后端布局对象：同一组绑定在不同 program 里会给出等价的
 // 掩码，据此可跨 program 复用布局。
-class VulkanDescriptorSetLayoutCache {
+class VulkanDescriptorSetLayoutCache : public NS_UTILS::Ref {
 public:
     VulkanDescriptorSetLayoutCache(VkDevice device, const ResourceManagerPtr& resourceManager);
     ~VulkanDescriptorSetLayoutCache();
@@ -63,5 +63,7 @@ private:
     ResourceManagerPtr m_resourceManager;
     LayoutMap          m_vkLayouts;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanDescriptorSetLayoutCache);
 
 END_NS_BACKEND

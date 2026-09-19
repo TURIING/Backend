@@ -7,7 +7,7 @@
 BEGIN_NS_BACKEND
 
 VulkanSwapChain::VulkanSwapChain(const VulkanPlatformPtr& platform, const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager,
-                                 VmaAllocator allocator, VulkanCommands* commands, const VulkanStagePoolPtr& stagePool, void* nativeWindow,
+                                 VmaAllocator allocator, const VulkanCommandsPtr& commands, const VulkanStagePoolPtr& stagePool, void* nativeWindow,
                                  uint64_t flags, VkExtent2D extent)
     : m_platform(platform),
       m_context(context),

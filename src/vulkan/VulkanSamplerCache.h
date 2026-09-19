@@ -12,7 +12,7 @@
 BEGIN_NS_BACKEND
 
 // VkSampler 的只增缓存：采样器一旦创建即在池内复用，没有淘汰路径
-class VulkanSamplerCache {
+class VulkanSamplerCache : public NS_UTILS::Ref {
 public:
     struct Params {
         SamplerParams           sampler    = {};
@@ -41,5 +41,7 @@ private:
 
     std::unordered_map<Params, VkSampler, SamplerHashFn, SamplerEqualTo> m_cache;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanSamplerCache);
 
 END_NS_BACKEND

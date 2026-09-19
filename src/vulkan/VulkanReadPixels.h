@@ -31,7 +31,7 @@ DECLARE_SHARE_PTR_CLASS(VulkanTexture);
 // 生命周期约束：读回线程持有 VkDevice 与自建命令池，因此 terminate() 必须在 VkDevice
 // 销毁前调用（不得晚于 VulkanDriver::DestroyResources 中销毁设备的那一步）。析构本身
 // 不做清理，须显式调用 terminate()。
-class VulkanReadPixels {
+class VulkanReadPixels : public NS_UTILS::Ref {
 public:
     // 在独立线程上执行任务的辅助类
     class TaskHandler {
@@ -85,5 +85,7 @@ private:
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     std::unique_ptr<TaskHandler> m_taskHandler;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanReadPixels);
 
 END_NS_BACKEND

@@ -15,11 +15,11 @@
 #include "vulkan/resource/Resource.h"
 #include "vulkan/stage/VulkanStagePool.h"
 #include "vulkan/utils/Image.h"
+#include "vulkan/commands/VulkanCommands.h"
 
 BEGIN_NS_BACKEND
 
 class PixelBufferDescriptor;
-class VulkanCommands;
 struct VulkanCommandBuffer;
 struct VulkanTexture;
 struct VulkanTextureState;
@@ -29,7 +29,7 @@ DECLARE_SHARE_PTR_CLASS(VulkanTextureState);
 
 // 纹理的共享状态：mip / swizzle 视图与源纹理共享同一份状态，图像视图缓存与布局跟踪因此只有一份
 struct VulkanTextureState : public Resource {
-    VulkanTextureState(const VulkanStagePoolPtr& stagePool, VulkanCommands* commands, VmaAllocator allocator,
+    VulkanTextureState(const VulkanStagePoolPtr& stagePool, const VulkanCommandsPtr& commands, VmaAllocator allocator,
                        VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VkFormat format, VkImageViewType viewType,
                        uint8_t levels, uint8_t layerCount, VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage,
                        bool isProtected);
@@ -63,7 +63,7 @@ private:
     void clearCachedImageViews() noexcept;
 
     VulkanStagePoolPtr m_stagePool;
-    VulkanCommands* const m_commands;
+    VulkanCommandsPtr const m_commands;
     VmaAllocator const    m_allocator;
     VkDevice const        m_device;
 
@@ -101,22 +101,22 @@ private:
 struct VulkanTexture : public HwTexture, public Resource {
     // 从零创建：驱动 createTextureR 的正路
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context, VmaAllocator allocator,
-                  const ResourceManagerPtr& resourceManager, VulkanCommands* commands, SamplerType target, uint8_t levels,
+                  const ResourceManagerPtr& resourceManager, const VulkanCommandsPtr& commands, SamplerType target, uint8_t levels,
                   TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth, TextureUsage tusage,
                   const VulkanStagePoolPtr& stagePool);
 
     // 包装已存在的 VkImage：交换链附件与内部创建的渲染目标；deviceMemory 为 VK_NULL_HANDLE 时图像不归本对象释放
     VulkanTexture(const VulkanContextPtr& context, VkDevice device, VmaAllocator allocator,
-                  const ResourceManagerPtr& resourceManager, VulkanCommands* commands, VkImage image, VkDeviceMemory deviceMemory,
+                  const ResourceManagerPtr& resourceManager, const VulkanCommandsPtr& commands, VkImage image, VkDeviceMemory deviceMemory,
                   VkFormat format, VkSamplerYcbcrConversion conversion, uint8_t samples, uint32_t width, uint32_t height,
                   uint32_t depth, TextureUsage tusage, const VulkanStagePoolPtr& stagePool);
 
     // 派生视图：只改主视图范围，图像、状态与视图缓存与源纹理共享
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context, VmaAllocator allocator,
-                  VulkanCommands* commands, const VulkanTexturePtr& src, uint8_t baseLevel, uint8_t levelCount);
+                  const VulkanCommandsPtr& commands, const VulkanTexturePtr& src, uint8_t baseLevel, uint8_t levelCount);
 
     VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context, VmaAllocator allocator,
-                  VulkanCommands* commands, const VulkanTexturePtr& src, VkComponentMapping swizzle);
+                  const VulkanCommandsPtr& commands, const VulkanTexturePtr& src, VkComponentMapping swizzle);
 
     ~VulkanTexture() override = default;
 

@@ -20,7 +20,7 @@ struct VulkanCommandBuffer;
 //
 // 池是一整块 VkQueryPool：每个计时器占相邻的两个查询（起、止）。已分配的计时器用位掩码
 // 标记，释放后位被清掉即可复用同一对查询。
-class VulkanQueryManager {
+class VulkanQueryManager : public NS_UTILS::Ref {
 public:
     // 与 vkGetQueryPoolResults 的读取布局一一对应：每项 64 位值加一个 64 位可用性标志
     struct QueryResult {
@@ -58,5 +58,7 @@ private:
     NS_UTILS::Bitset32 m_used;
     std::mutex         m_mutex;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanQueryManager);
 
 END_NS_BACKEND

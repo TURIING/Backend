@@ -33,7 +33,7 @@ uint32_t alignValue(uint32_t value, uint32_t alignment) {
 }  // namespace
 
 VulkanStagePool::VulkanStagePool(const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager, VmaAllocator allocator,
-                                 VulkanCommands* commands)
+                                 const VulkanCommandsPtr& commands)
     : m_context(context), m_resourceManager(resourceManager), m_allocator(allocator), m_commands(commands) {}
 
 VulkanStageImage::ResourcePtr VulkanStagePool::AcquireStageImage(PixelDataFormat format, PixelDataType type, uint32_t width,

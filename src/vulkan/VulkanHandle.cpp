@@ -65,7 +65,7 @@ VulkanAttachment CreateSwapchainAttachment(const VulkanTexturePtr& texture) {
 
 // MSAA 侧车纹理随源纹理走：同一条纹理只会创建一个，之后复用
 VulkanTexturePtr InitMsaaTexture(const VulkanTexturePtr& texture, VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context,
-                                 VmaAllocator allocator, VulkanCommands* commands, const ResourceManagerPtr& resManager, uint8_t levels,
+                                 VmaAllocator allocator, const VulkanCommandsPtr& commands, const ResourceManagerPtr& resManager, uint8_t levels,
                                  uint8_t samples, const VulkanStagePoolPtr& stagePool) {
     LOG_ASSERT(static_cast<bool>(texture));
 
@@ -252,7 +252,7 @@ void VulkanRenderTarget::ReleaseSwapchain() {
 }
 
 VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context,
-                                       const ResourceManagerPtr& resourceManager, VmaAllocator allocator, VulkanCommands* commands, uint32_t width,
+                                       const ResourceManagerPtr& resourceManager, VmaAllocator allocator, const VulkanCommandsPtr& commands, uint32_t width,
                                        uint32_t height, uint8_t samples, VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT],
                                        VulkanAttachment depthStencil, const VulkanStagePoolPtr& stagePool, uint8_t layerCount)
     : HwRenderTarget(width, height), m_offscreen(true), m_protected(false), m_info(std::make_unique<Auxiliary>()) {

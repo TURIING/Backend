@@ -234,7 +234,7 @@ uint8_t getAlignmentForBufferToImageCopy(VkFormat format) {
 
 }  // namespace
 
-VulkanTextureState::VulkanTextureState(const VulkanStagePoolPtr& stagePool, VulkanCommands* commands, VmaAllocator allocator,
+VulkanTextureState::VulkanTextureState(const VulkanStagePoolPtr& stagePool, const VulkanCommandsPtr& commands, VmaAllocator allocator,
                                        VkDevice device, VkImage image, VkDeviceMemory deviceMemory, VkFormat format,
                                        VkImageViewType viewType, uint8_t levels, uint8_t layerCount,
                                        VkSamplerYcbcrConversion ycbcrConversion, VkImageUsageFlags usage, bool isProtected)
@@ -299,7 +299,7 @@ VkImageView VulkanTextureState::getImageView(VkImageSubresourceRange range, VkIm
 
 // 包装外部已创建的 VkImage（交换链图像、外部图像）；deviceMemory 为空时图像不归本对象所有
 VulkanTexture::VulkanTexture(const VulkanContextPtr& context, VkDevice device, VmaAllocator allocator,
-                             const ResourceManagerPtr& resourceManager, VulkanCommands* commands, VkImage image,
+                             const ResourceManagerPtr& resourceManager, const VulkanCommandsPtr& commands, VkImage image,
                              VkDeviceMemory deviceMemory, VkFormat format, VkSamplerYcbcrConversion conversion, uint8_t samples,
                              uint32_t width, uint32_t height, uint32_t depth, TextureUsage tusage,
                              const VulkanStagePoolPtr& stagePool)
@@ -313,7 +313,7 @@ VulkanTexture::VulkanTexture(const VulkanContextPtr& context, VkDevice device, V
 
 // 从零创建：驱动 createTextureR 的正路
 VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context,
-                             VmaAllocator allocator, const ResourceManagerPtr& resourceManager, VulkanCommands* commands,
+                             VmaAllocator allocator, const ResourceManagerPtr& resourceManager, const VulkanCommandsPtr& commands,
                              SamplerType target, uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
                              uint32_t depth, TextureUsage tusage, const VulkanStagePoolPtr& stagePool)
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage, false) {
@@ -418,7 +418,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, c
 
 VulkanTexture::VulkanTexture([[maybe_unused]] VkDevice device, [[maybe_unused]] VkPhysicalDevice physicalDevice,
                              [[maybe_unused]] const VulkanContextPtr& context, [[maybe_unused]] VmaAllocator allocator,
-                             [[maybe_unused]] VulkanCommands* commands, const VulkanTexturePtr& src, uint8_t baseLevel,
+                             [[maybe_unused]] const VulkanCommandsPtr& commands, const VulkanTexturePtr& src, uint8_t baseLevel,
                              uint8_t levelCount)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth, src->format, src->usage, src->asynchronous),
       m_state(src->m_state) {
@@ -429,7 +429,7 @@ VulkanTexture::VulkanTexture([[maybe_unused]] VkDevice device, [[maybe_unused]] 
 
 VulkanTexture::VulkanTexture([[maybe_unused]] VkDevice device, [[maybe_unused]] VkPhysicalDevice physicalDevice,
                              [[maybe_unused]] const VulkanContextPtr& context, [[maybe_unused]] VmaAllocator allocator,
-                             [[maybe_unused]] VulkanCommands* commands, const VulkanTexturePtr& src, VkComponentMapping swizzle)
+                             [[maybe_unused]] const VulkanCommandsPtr& commands, const VulkanTexturePtr& src, VkComponentMapping swizzle)
     : HwTexture(src->target, src->levels, src->samples, src->width, src->height, src->depth, src->format, src->usage, src->asynchronous),
       m_state(src->m_state),
       m_primaryViewRange(src->m_primaryViewRange),

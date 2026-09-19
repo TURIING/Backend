@@ -10,10 +10,10 @@
 #include "vulkan/VulkanContext.h"
 #include "vulkan/resource/ResourceManager.h"
 #include "vulkan/stage/VulkanStageBuffer.h"
+#include "vulkan/commands/VulkanCommands.h"
 
 BEGIN_NS_BACKEND
 
-class VulkanCommands;
 
 // 暂存图像：按 (格式, 宽, 高) 复用的线性平铺图像，作 blit 上传的中转
 class VulkanStageImage {
@@ -81,7 +81,7 @@ DECLARE_CLASS_AND_SHARE_PTR(VulkanStagePool);
 class VulkanStagePool : public NS_UTILS::Ref {
 public:
     VulkanStagePool(const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager, VmaAllocator allocator,
-                    VulkanCommands* commands);
+                    const VulkanCommandsPtr& commands);
 
     VulkanStagePool(const VulkanStagePool&)            = delete;
     VulkanStagePool& operator=(const VulkanStagePool&) = delete;
@@ -109,7 +109,7 @@ private:
     ResourceManagerPtr m_resourceManager;
     VmaAllocator       m_allocator;
     // 驱动在当前变更尚未持有 VulkanCommands（属变更 7 接线），为空时跳过图像布局转换
-    VulkanCommands*    m_commands;
+    VulkanCommandsPtr m_commands;
 
     // 剩余可切分空间 → 缓冲，lower_bound(numBytes) 命中容量足够的候选
     std::multimap<uint32_t, VulkanStageBufferPtr> m_stages;

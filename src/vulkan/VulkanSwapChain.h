@@ -15,10 +15,10 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include "vulkan/commands/VulkanCommands.h"
 
 BEGIN_NS_BACKEND
 
-class VulkanCommands;
 
 DECLARE_SHARE_PTR_CLASS(VulkanSwapChain);
 
@@ -26,7 +26,7 @@ DECLARE_SHARE_PTR_CLASS(VulkanSwapChain);
 // 并封装图像获取、呈现与重建
 struct VulkanSwapChain : public HwSwapChain, public Resource {
     VulkanSwapChain(const VulkanPlatformPtr& platform, const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager,
-                    VmaAllocator allocator, VulkanCommands* commands, const VulkanStagePoolPtr& stagePool, void* nativeWindow, uint64_t flags,
+                    VmaAllocator allocator, const VulkanCommandsPtr& commands, const VulkanStagePoolPtr& stagePool, void* nativeWindow, uint64_t flags,
                     VkExtent2D extent = { 0, 0 });
 
     ~VulkanSwapChain() override;
@@ -63,7 +63,7 @@ private:
     VulkanPlatformPtr  m_platform;
     VulkanContextPtr   m_context;
     ResourceManagerPtr m_resourceManager;
-    VulkanCommands*    m_commands;
+    VulkanCommandsPtr m_commands;
     VmaAllocator       m_allocator;
     VulkanStagePoolPtr m_stagePool;
     bool const         m_headless;

@@ -6,12 +6,13 @@
 
 BEGIN_NS_BACKEND
 
-VulkanCommands::VulkanCommands(VkDevice device, VkQueue queue, uint32_t queueFamilyIndex, const VulkanContextPtr &context,
+VulkanCommands::VulkanCommands(const VulkanPlatformPtr &platform, const VulkanContextPtr &context,
                                const VulkanSemaphoreManagerPtr &semaphoreManager)
-    : m_device(device),
+    : m_device(platform->GetVkDevice()),
       m_context(context),
       m_semaphoreManager(semaphoreManager),
-      m_pool(std::make_unique<VulkanCommandBufferPool>(context, device, queue, queueFamilyIndex, semaphoreManager)) {}
+      m_pool(std::make_unique<VulkanCommandBufferPool>(context, platform->GetVkDevice(), platform->GetVkGraphicsQueue(),
+                                                       platform->GetGraphicsQueueFamilyIndex(), semaphoreManager)) {}
 
 void VulkanCommands::Terminate() {
     m_pool.reset();

@@ -317,7 +317,7 @@ DECLARE_SHARE_PTR_CLASS(VulkanDescriptorSet);
 struct VulkanRenderTarget : private HwRenderTarget, public Resource {
     // 离屏渲染目标
     VulkanRenderTarget(VkDevice device, VkPhysicalDevice physicalDevice, const VulkanContextPtr& context, const ResourceManagerPtr& resourceManager,
-                       VmaAllocator allocator, VulkanCommands* commands, uint32_t width, uint32_t height, uint8_t samples,
+                       VmaAllocator allocator, const VulkanCommandsPtr& commands, uint32_t width, uint32_t height, uint8_t samples,
                        VulkanAttachment color[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT], VulkanAttachment depthStencil,
                        const VulkanStagePoolPtr& stagePool, uint8_t layerCount);
 

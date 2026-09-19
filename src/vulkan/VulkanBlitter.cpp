@@ -96,7 +96,7 @@ void ResolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, Vulka
 
 }  // namespace
 
-VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, VulkanCommands* commands) noexcept
+VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, const VulkanCommandsPtr& commands) noexcept
     : m_physicalDevice(physicalDevice), m_commands(commands) {}
 
 void VulkanBlitter::Resolve(VulkanAttachment dst, VulkanAttachment src) {

@@ -14,7 +14,7 @@
 BEGIN_NS_BACKEND
 
 // VkSamplerYcbcrConversion 的只增缓存
-class VulkanYcbcrConversionCache {
+class VulkanYcbcrConversionCache : public NS_UTILS::Ref {
 public:
     struct Params {
         VK_UTILS::SamplerYcbcrConversion conversion     = {};  // 4
@@ -43,5 +43,7 @@ private:
 
     std::unordered_map<Params, VkSamplerYcbcrConversion, ConversionHashFn, ConversionEqualTo> m_cache;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanYcbcrConversionCache);
 
 END_NS_BACKEND

@@ -20,7 +20,7 @@
 BEGIN_NS_BACKEND
 
 // 描述符池之上的抽象层：负责描述符集的分配、复用、绑定状态与提交。
-class VulkanDescriptorSetCache {
+class VulkanDescriptorSetCache : public NS_UTILS::Ref {
 public:
     static constexpr uint8_t kUniqueDescriptorSetCount = VulkanDescriptorSetLayout::kUniqueDescriptorSetCount;
 
@@ -69,20 +69,24 @@ public:
     void ResetCachedState() noexcept { m_lastBoundInfo = {}; }
 
 private:
-    void CopySet(VkDescriptorSet srcSet, VkDescriptorSet destSet, VK_UTILS::SamplerBitmask copyBindings) const;
-
     class DescriptorInfinitePool;
+
+    struct LastBoundInfo {
+        VkPipelineLayout            pipelineLayout = VK_NULL_HANDLE;
+        VK_UTILS::DescriptorSetMask setMask;
+        DescriptorSetArray          boundSets = {};
+    };
+
+    void CopySet(VkDescriptorSet srcSet, VkDescriptorSet destSet, VK_UTILS::SamplerBitmask copyBindings) const;
 
     VkDevice           m_device;
     ResourceManagerPtr m_resourceManager;
     std::unique_ptr<DescriptorInfinitePool> m_descriptorPool;
     DescriptorSetArray m_stashedSets = {};
 
-    struct {
-        VkPipelineLayout             pipelineLayout = VK_NULL_HANDLE;
-        VK_UTILS::DescriptorSetMask  setMask;
-        DescriptorSetArray           boundSets = {};
-    } m_lastBoundInfo;
+    LastBoundInfo m_lastBoundInfo;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanDescriptorSetCache);
 
 END_NS_BACKEND

@@ -26,7 +26,7 @@ class DriverBase;
 // 图形管线与其布局的缓存。
 //
 // 约定：视口与裁剪矩形一律是动态状态，不烘进 VkPipeline。
-class VulkanPipelineCache {
+class VulkanPipelineCache : public NS_UTILS::Ref {
 public:
     VulkanPipelineCache(VulkanPipelineCache const&)            = delete;
     VulkanPipelineCache& operator=(VulkanPipelineCache const&) = delete;
@@ -226,5 +226,7 @@ private:
 
     [[maybe_unused]] VulkanContext const& m_context;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanPipelineCache);
 
 END_NS_BACKEND

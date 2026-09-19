@@ -20,7 +20,7 @@ BEGIN_NS_BACKEND
 //
 // 布局由「描述符集布局数组 + 各 stage 的 push constant 范围」共同决定；后者不关心具体
 // 偏移，只需 stage 与字节数，故键里只存这两项。
-class VulkanPipelineLayoutCache {
+class VulkanPipelineLayoutCache : public NS_UTILS::Ref {
 public:
     using DescriptorSetLayoutArray = VulkanDescriptorSetLayout::DescriptorSetLayoutArray;
 
@@ -70,5 +70,7 @@ private:
     Timestamp         m_timestamp;
     PipelineLayoutMap m_pipelineLayouts;
 };
+
+DECLARE_SHARE_PTR_CLASS(VulkanPipelineLayoutCache);
 
 END_NS_BACKEND

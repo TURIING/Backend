@@ -31,7 +31,7 @@ constexpr size_t kMinHandleArenaSize = 8u * 1024u * 1024u;
 // 被跳过的帧也会累积命令，故必须有独立于 flush() 的 GC 节奏
 constexpr uint8_t kMaxTicksBetweenGc = 3;
 
-VmaAllocator CreateAllocator(VkInstance instance, VkPhysicalDevice physicalDevice, VkDevice device) noexcept {
+VmaAllocator CreateAllocator(const VulkanPlatformPtr& platform) noexcept {
     VmaVulkanFunctions const vulkanFunctions{
         .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
         .vkGetDeviceProcAddr   = vkGetDeviceProcAddr,
@@ -40,10 +40,10 @@ VmaAllocator CreateAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
     VmaAllocatorCreateInfo const allocatorInfo{
         // 后端单线程访问 VMA，关掉其内部同步以省开销
         .flags            = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
-        .physicalDevice   = physicalDevice,
-        .device           = device,
+        .physicalDevice   = platform->GetVkPhysicalDevice(),
+        .device           = platform->GetVkDevice(),
         .pVulkanFunctions = &vulkanFunctions,
-        .instance         = instance,
+        .instance         = platform->GetVkInstance(),
     };
 
     VmaAllocator allocator = VK_NULL_HANDLE;
@@ -80,29 +80,31 @@ inline VulkanYcbcrConversionCache::Params GetYcbcrConversionParams(VulkanPlatfor
 
 }  // namespace
 
-VulkanDriver::VulkanDriver(VulkanPlatform* platform, const VulkanContextPtr& context, const DriverConfig& config)
+VulkanDriver::VulkanDriver(const VulkanPlatformPtr& platform, const VulkanContextPtr& context,
+                           const DriverConfig& config)
     : DriverBase(config),
-      mPlatform(VulkanPlatformPtr(platform)),
-      m_resMgr(new ResourceManager(config.handleArenaSize, config.disableHandleUseAfterFreeCheck, config.disableHeapHandleTags)),
-      // 默认渲染目标先于 createDefaultRenderTarget() 创建，届时把内容换过去；
-      // 这样 createDefaultRenderTarget() 与 makeCurrent() 之间就没有调用顺序约束
+      mPlatform(platform),
+      m_resMgr(new ResourceManager(config.handleArenaSize, config.disableHandleUseAfterFreeCheck,
+                                   config.disableHeapHandleTags)),
       mDefaultRenderTarget(m_resMgr->AllocateAndConstruct<VulkanRenderTarget>()),
-      m_allocator(CreateAllocator(platform->GetVkInstance(), platform->GetVkPhysicalDevice(), platform->GetVkDevice())),
+      m_allocator(CreateAllocator(platform)),
       m_context(context),
       m_semaphoreManager(new VulkanSemaphoreManager(platform->GetVkDevice(), m_resMgr)),
-      m_commands(platform->GetVkDevice(), platform->GetVkGraphicsQueue(), platform->GetGraphicsQueueFamilyIndex(), m_context, m_semaphoreManager),
-      m_pipelineLayoutCache(platform->GetVkDevice()),
-      m_pipelineCache(*this, platform->GetVkDevice(), *m_context),
-      m_stagePool(new VulkanStagePool(m_context, m_resMgr, m_allocator, &m_commands)),
+      m_commands(NS_UTILS::MakeShared<VulkanCommands>(platform, m_context, m_semaphoreManager)),
+      m_pipelineLayoutCache(NS_UTILS::MakeShared<VulkanPipelineLayoutCache>(platform->GetVkDevice())),
+      m_pipelineCache(NS_UTILS::MakeShared<VulkanPipelineCache>(*this, platform->GetVkDevice(), *m_context)),
+      m_stagePool(new VulkanStagePool(m_context, m_resMgr, m_allocator, m_commands)),
       m_bufferCache(new VulkanBufferCache(m_context, m_resMgr, m_allocator)),
-      m_framebufferCache(platform->GetVkDevice(), platform->GetCustomization().timeBeforeEvictionFbo),
-      m_ycbcrConversionCache(platform->GetVkDevice()),
-      m_samplerCache(platform->GetVkDevice()),
-      m_blitter(platform->GetVkPhysicalDevice(), &m_commands),
-      m_readPixels(platform->GetVkDevice()),
-      m_descriptorSetLayoutCache(platform->GetVkDevice(), m_resMgr),
-      m_descriptorSetCache(platform->GetVkDevice(), m_resMgr),
-      m_queryManager(platform->GetVkDevice()),
+      m_framebufferCache(
+              NS_UTILS::MakeShared<VulkanFboCache>(platform->GetVkDevice(), platform->GetCustomization().timeBeforeEvictionFbo)),
+      m_ycbcrConversionCache(NS_UTILS::MakeShared<VulkanYcbcrConversionCache>(platform->GetVkDevice())),
+      m_samplerCache(NS_UTILS::MakeShared<VulkanSamplerCache>(platform->GetVkDevice())),
+      m_blitter(NS_UTILS::MakeShared<VulkanBlitter>(platform->GetVkPhysicalDevice(), m_commands)),
+      m_readPixels(NS_UTILS::MakeShared<VulkanReadPixels>(platform->GetVkDevice())),
+      m_descriptorSetLayoutCache(
+              NS_UTILS::MakeShared<VulkanDescriptorSetLayoutCache>(platform->GetVkDevice(), m_resMgr)),
+      m_descriptorSetCache(NS_UTILS::MakeShared<VulkanDescriptorSetCache>(platform->GetVkDevice(), m_resMgr)),
+      m_queryManager(NS_UTILS::MakeShared<VulkanQueryManager>(platform->GetVkDevice())),
       mIsSRGBSwapChainSupported(platform->GetCustomization().isSRGBSwapChainSupported),
       mStereoscopicType(config.stereoscopicType),
       mStereoscopicEyeCount(config.stereoscopicEyeCount),
@@ -110,7 +112,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, const VulkanContextPtr& con
 
 VulkanDriver::~VulkanDriver() noexcept { DestroyResources(); }
 
-DriverPtr VulkanDriver::Create(VulkanPlatform* platform, const VulkanContextPtr& context, const DriverConfig& config) {
+DriverPtr VulkanDriver::Create(const VulkanPlatformPtr& platform, const VulkanContextPtr& context,
+                               const DriverConfig& config) {
     LOG_ASSERT(platform);
     DriverConfig validConfig    = config;
     validConfig.handleArenaSize = std::max(config.handleArenaSize, kMinHandleArenaSize);
@@ -134,28 +137,28 @@ void VulkanDriver::DestroyResources() noexcept {
 
     // 排空队列并等待在途命令，后续各步才能安全释放被它们引用的对象
     // 此处不能走 finish()：它内部会从命令流分配命令，而 terminate() 可能来自非录制线程
-    m_commands.Flush();
-    m_commands.Wait();
+    m_commands->Flush();
+    m_commands->Wait();
 
     mCurrentSwapChain    = {};
     mDefaultRenderTarget = {};
     mPipelineState       = {};
 
-    m_queryManager.Terminate();
-    m_blitter.Terminate();
-    m_readPixels.Terminate();
+    m_queryManager->Terminate();
+    m_blitter->Terminate();
+    m_readPixels->Terminate();
 
     // 1. 先让命令与各缓存放掉 VkPipeline / VkRenderPass / VkFramebuffer / VkSampler /
     //    VkDescriptorSet* / VkCommandPool
-    m_commands.Terminate();
+    m_commands->Terminate();
 
-    m_pipelineCache.Terminate();
-    m_framebufferCache.Terminate();
-    m_samplerCache.Terminate();
-    m_descriptorSetLayoutCache.Terminate();
-    m_descriptorSetCache.Terminate();
-    m_pipelineLayoutCache.Terminate();
-    m_ycbcrConversionCache.Terminate();
+    m_pipelineCache->Terminate();
+    m_framebufferCache->Terminate();
+    m_samplerCache->Terminate();
+    m_descriptorSetLayoutCache->Terminate();
+    m_descriptorSetCache->Terminate();
+    m_pipelineLayoutCache->Terminate();
+    m_ycbcrConversionCache->Terminate();
 
     // 2. 清空引用计数资源：暂存段的回收回调会写回母缓冲，故必须早于 3 的池销毁
     if (m_resMgr) {
@@ -184,7 +187,7 @@ void VulkanDriver::DestroyResources() noexcept {
 }
 
 void VulkanDriver::tick(int) {
-    m_commands.UpdateFences();
+    m_commands->UpdateFences();
 
     // 前端跳过大量帧时，flush() 可能久不调用，命令与资源会持续累积；
     // 这里保证 GC 与 flush 有独立于帧循环的节奏
@@ -198,12 +201,12 @@ void VulkanDriver::collectGarbage() {
     m_ticksSinceLastGc = 0;
 
     // 命令缓冲必须先提交完成，其它资源的回收才安全
-    m_commands.Gc();
-    m_descriptorSetCache.Gc();
+    m_commands->Gc();
+    m_descriptorSetCache->Gc();
     m_stagePool->Gc();
     m_bufferCache->Gc();
-    m_framebufferCache.Gc();
-    m_pipelineCache.Gc();
+    m_framebufferCache->Gc();
+    m_pipelineCache->Gc();
 
     m_resMgr->Gc();
     collectDescriptors();
@@ -215,14 +218,16 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, int64_t refreshInterva
 
     // 检查已完成的命令并释放其占用的资源：引用计数在这里下降，从而能判断
     // 某个 VulkanBuffer 是否还在途
-    m_commands.Gc();
+    m_commands->Gc();
 }
 
-void VulkanDriver::SetFrameScheduledCallback(SwapChainHandle sch, CallbackHandler* handler, FrameScheduledCallback&& callback, uint64_t flags) {
+void VulkanDriver::SetFrameScheduledCallback(SwapChainHandle sch, CallbackHandler* handler,
+                                             FrameScheduledCallback&& callback, uint64_t flags) {
     // 本项目未移植 PresentCallable，帧调度回调无落点；保留接口形态以便前端调用不失败
 }
 
-void VulkanDriver::SetFrameCompletedCallback(SwapChainHandle sch, CallbackHandler* handler, std::function<void()>&& callback) {}
+void VulkanDriver::SetFrameCompletedCallback(SwapChainHandle sch, CallbackHandler* handler,
+                                             std::function<void()>&& callback) {}
 
 void VulkanDriver::SetPresentationTime(int64_t monotonic_clock_ns) {}
 
@@ -239,38 +244,45 @@ void VulkanDriver::finish(int) {
     // 只等缓冲自身的围栏不够：Present 也提交到同一条队列，故须等队列空闲
     vkQueueWaitIdle(mPlatform->GetVkGraphicsQueue());
 
-    m_commands.Wait();
-    m_readPixels.RunUntilComplete();
+    m_commands->Wait();
+    m_readPixels->RunUntilComplete();
 
     m_pendingDescriptors.clear();
 }
 
 void VulkanDriver::resetState(int) {}
 
-void VulkanDriver::deferDestroy(BufferDescriptor&& data) { m_pendingDescriptors.push_back({ std::move(data), m_commands.Get().Age() }); }
+void VulkanDriver::deferDestroy(BufferDescriptor&& data) {
+    m_pendingDescriptors.push_back({ std::move(data), m_commands->Get().Age() });
+}
 
-void VulkanDriver::deferDestroy(PixelBufferDescriptor&& data) { m_pendingDescriptors.push_back({ std::move(data), m_commands.Get().Age() }); }
+void VulkanDriver::deferDestroy(PixelBufferDescriptor&& data) {
+    m_pendingDescriptors.push_back({ std::move(data), m_commands->Get().Age() });
+}
 
 void VulkanDriver::collectDescriptors() {
     // 命令缓冲最多同时存在 kMaxCommandBuffers 个，比该值更老的数据不可能还在被 GPU 读取
-    uint32_t const currentAge = m_commands.Get().Age();
-    while (!m_pendingDescriptors.empty() && currentAge - m_pendingDescriptors.front().submittedAge >= kMaxCommandBuffers) {
+    uint32_t const currentAge = m_commands->Get().Age();
+    while (!m_pendingDescriptors.empty() &&
+           currentAge - m_pendingDescriptors.front().submittedAge >= kMaxCommandBuffers) {
         m_pendingDescriptors.pop_front();
     }
 }
 
 void VulkanDriver::endCommandRecording() {
-    m_commands.Flush();
-    m_pipelineCache.ResetBoundPipeline();
-    m_descriptorSetCache.ResetCachedState();
+    m_commands->Flush();
+    m_pipelineCache->ResetBoundPipeline();
+    m_descriptorSetCache->ResetCachedState();
 }
 
 // ---------------------------------------------------------------- 资源创建与销毁
 
-Handle<HwVertexBufferInfo> VulkanDriver::CreateVertexBufferInfoS() noexcept { return m_resMgr->AllocHandle<VulkanVertexBufferInfo>(); }
+Handle<HwVertexBufferInfo> VulkanDriver::CreateVertexBufferInfoS() noexcept {
+    return m_resMgr->AllocHandle<VulkanVertexBufferInfo>();
+}
 
-void VulkanDriver::CreateVertexBufferInfoR(VertexBufferInfoHandle vbih, uint8_t bufferCount, uint8_t attributeCount, AttributeArray attributes,
-                                           NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateVertexBufferInfoR(VertexBufferInfoHandle vbih, uint8_t bufferCount, uint8_t attributeCount,
+                                           AttributeArray attributes, NS_UTILS::ImmutableString&& tag) {
     m_resMgr->Make<VulkanVertexBufferInfo>(vbih, bufferCount, attributeCount, attributes);
     m_resMgr->AssociateTagToHandle(vbih.GetId(), std::move(tag));
 }
@@ -283,19 +295,24 @@ void VulkanDriver::DestroyVertexBufferInfo(VertexBufferInfoHandle vbih) {
     m_resMgr->Destroy(vbi);
 }
 
-Handle<HwVertexBuffer> VulkanDriver::CreateVertexBufferS() noexcept { return m_resMgr->AllocHandle<VulkanVertexBuffer>(); }
+Handle<HwVertexBuffer> VulkanDriver::CreateVertexBufferS() noexcept {
+    return m_resMgr->AllocHandle<VulkanVertexBuffer>();
+}
 
-void VulkanDriver::CreateVertexBufferR(VertexBufferHandle vbh, uint32_t vertexCount, VertexBufferInfoHandle vbInfoHandle,
-                                       NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateVertexBufferR(VertexBufferHandle vbh, uint32_t vertexCount,
+                                       VertexBufferInfoHandle vbInfoHandle, NS_UTILS::ImmutableString&& tag) {
     auto vbi = m_resMgr->Acquire<VulkanVertexBufferInfo>(vbInfoHandle);
     m_resMgr->Make<VulkanVertexBuffer>(vbh, m_context, m_bufferCache, vertexCount, vbi);
     m_resMgr->AssociateTagToHandle(vbh.GetId(), std::move(tag));
 }
 
-Handle<HwVertexBuffer> VulkanDriver::CreateVertexBufferAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanVertexBuffer>(); }
+Handle<HwVertexBuffer> VulkanDriver::CreateVertexBufferAsyncS() noexcept {
+    return m_resMgr->AllocHandle<VulkanVertexBuffer>();
+}
 
-void VulkanDriver::CreateVertexBufferAsyncR(VertexBufferHandle vbh, uint32_t vertexCount, VertexBufferInfoHandle vbih, CallbackHandler* handler,
-                                            CallbackHandler::Callback callback, void* user, NS_UTILS::ImmutableString&& tag) {}
+void VulkanDriver::CreateVertexBufferAsyncR(VertexBufferHandle vbh, uint32_t vertexCount, VertexBufferInfoHandle vbih,
+                                            CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+                                            NS_UTILS::ImmutableString&& tag) {}
 
 void VulkanDriver::DestroyVertexBuffer(VertexBufferHandle vbh) {
     if (!vbh) {
@@ -314,10 +331,13 @@ void VulkanDriver::CreateIndexBufferR(IndexBufferHandle ibh, ElementType element
     m_resMgr->AssociateTagToHandle(ibh.GetId(), std::move(tag));
 }
 
-Handle<HwIndexBuffer> VulkanDriver::CreateIndexBufferAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanIndexBuffer>(); }
+Handle<HwIndexBuffer> VulkanDriver::CreateIndexBufferAsyncS() noexcept {
+    return m_resMgr->AllocHandle<VulkanIndexBuffer>();
+}
 
-void VulkanDriver::CreateIndexBufferAsyncR(IndexBufferHandle ibh, ElementType elementType, uint32_t indexCount, BufferUsage usage,
-                                           CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+void VulkanDriver::CreateIndexBufferAsyncR(IndexBufferHandle ibh, ElementType elementType, uint32_t indexCount,
+                                           BufferUsage usage, CallbackHandler* handler,
+                                           CallbackHandler::Callback callback, void* user,
                                            NS_UTILS::ImmutableString&& tag) {}
 
 void VulkanDriver::DestroyIndexBuffer(IndexBufferHandle ibh) {
@@ -328,18 +348,24 @@ void VulkanDriver::DestroyIndexBuffer(IndexBufferHandle ibh) {
     m_resMgr->Destroy(ib);
 }
 
-Handle<HwBufferObject> VulkanDriver::CreateBufferObjectS() noexcept { return m_resMgr->AllocHandle<VulkanBufferObject>(); }
+Handle<HwBufferObject> VulkanDriver::CreateBufferObjectS() noexcept {
+    return m_resMgr->AllocHandle<VulkanBufferObject>();
+}
 
-void VulkanDriver::CreateBufferObjectR(BufferObjectHandle boh, uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage,
-                                       NS_UTILS::ImmutableString&& tag) {
-    m_resMgr->Make<VulkanBufferObject>(boh, m_context, m_allocator, m_stagePool, m_bufferCache, byteCount, bindingType, usage);
+void VulkanDriver::CreateBufferObjectR(BufferObjectHandle boh, uint32_t byteCount, BufferObjectBinding bindingType,
+                                       BufferUsage usage, NS_UTILS::ImmutableString&& tag) {
+    m_resMgr->Make<VulkanBufferObject>(boh, m_context, m_allocator, m_stagePool, m_bufferCache, byteCount, bindingType,
+                                       usage);
     m_resMgr->AssociateTagToHandle(boh.GetId(), std::move(tag));
 }
 
-Handle<HwBufferObject> VulkanDriver::CreateBufferObjectAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanBufferObject>(); }
+Handle<HwBufferObject> VulkanDriver::CreateBufferObjectAsyncS() noexcept {
+    return m_resMgr->AllocHandle<VulkanBufferObject>();
+}
 
-void VulkanDriver::CreateBufferObjectAsyncR(BufferObjectHandle boh, uint32_t byteCount, BufferObjectBinding bindingType, BufferUsage usage,
-                                            CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
+void VulkanDriver::CreateBufferObjectAsyncR(BufferObjectHandle boh, uint32_t byteCount, BufferObjectBinding bindingType,
+                                            BufferUsage usage, CallbackHandler* handler,
+                                            CallbackHandler::Callback callback, void* user,
                                             NS_UTILS::ImmutableString&& tag) {}
 
 void VulkanDriver::DestroyBufferObject(BufferObjectHandle boh) {
@@ -363,32 +389,36 @@ AsyncCallId VulkanDriver::SetVertexBufferObjectAsyncS() noexcept {
     return 0;
 }
 
-void VulkanDriver::SetVertexBufferObjectAsyncR(AsyncCallId jobId, VertexBufferHandle vbh, uint32_t index, BufferObjectHandle bufferObject,
-                                               CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {}
+void VulkanDriver::SetVertexBufferObjectAsyncR(AsyncCallId jobId, VertexBufferHandle vbh, uint32_t index,
+                                               BufferObjectHandle bufferObject, CallbackHandler* handler,
+                                               CallbackHandler::Callback callback, void* user) {}
 
 void VulkanDriver::UpdateIndexBuffer(IndexBufferHandle ibh, BufferDescriptor&& data, uint32_t byteOffset) {
     auto ib = m_resMgr->Acquire<VulkanIndexBuffer>(ibh);
-    ib->LoadFromCpu(m_commands.Get(), data.buffer, byteOffset, static_cast<uint32_t>(data.size));
+    ib->LoadFromCpu(m_commands->Get(), data.buffer, byteOffset, static_cast<uint32_t>(data.size));
     deferDestroy(std::move(data));
 }
 
 AsyncCallId VulkanDriver::UpdateIndexBufferAsyncS() noexcept { return 0; }
 
-void VulkanDriver::UpdateIndexBufferAsyncR(AsyncCallId jobId, IndexBufferHandle ibh, BufferDescriptor&& data, uint32_t byteOffset,
-                                           CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {}
+void VulkanDriver::UpdateIndexBufferAsyncR(AsyncCallId jobId, IndexBufferHandle ibh, BufferDescriptor&& data,
+                                           uint32_t byteOffset, CallbackHandler* handler,
+                                           CallbackHandler::Callback callback, void* user) {}
 
 void VulkanDriver::UpdateBufferObject(BufferObjectHandle boh, BufferDescriptor&& data, uint32_t byteOffset) {
     auto bo = m_resMgr->Acquire<VulkanBufferObject>(boh);
-    bo->LoadFromCpu(m_commands.Get(), data.buffer, byteOffset, static_cast<uint32_t>(data.size));
+    bo->LoadFromCpu(m_commands->Get(), data.buffer, byteOffset, static_cast<uint32_t>(data.size));
     deferDestroy(std::move(data));
 }
 
 AsyncCallId VulkanDriver::UpdateBufferObjectAsyncS() noexcept { return 0; }
 
-void VulkanDriver::UpdateBufferObjectAsyncR(AsyncCallId jobId, BufferObjectHandle boh, BufferDescriptor&& data, uint32_t byteOffset,
-                                            CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {}
+void VulkanDriver::UpdateBufferObjectAsyncR(AsyncCallId jobId, BufferObjectHandle boh, BufferDescriptor&& data,
+                                            uint32_t byteOffset, CallbackHandler* handler,
+                                            CallbackHandler::Callback callback, void* user) {}
 
-void VulkanDriver::UpdateBufferObjectUnsynchronized(BufferObjectHandle boh, BufferDescriptor&& data, uint32_t byteOffset) {
+void VulkanDriver::UpdateBufferObjectUnsynchronized(BufferObjectHandle boh, BufferDescriptor&& data,
+                                                    uint32_t byteOffset) {
     // 上游同样走同步路径（未实现真正的无同步上传），保留其行为
     UpdateBufferObject(boh, std::move(data), byteOffset);
 }
@@ -397,8 +427,8 @@ void VulkanDriver::ResetBufferObject(BufferObjectHandle boh) {
     // 上游为空实现：只有 updateBufferObjectUnsynchronized 真正无同步时，把旧缓冲孤立才有意义
 }
 
-void VulkanDriver::Update3DImage(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset, uint32_t width,
-                                 uint32_t height, uint32_t depth, PixelBufferDescriptor&& data) {
+void VulkanDriver::Update3DImage(TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+                                 uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor&& data) {
     auto texture = m_resMgr->Acquire<VulkanTexture>(th);
     texture->UpdateImage(data, width, height, depth, xoffset, yoffset, zoffset, level);
     deferDestroy(std::move(data));
@@ -406,19 +436,22 @@ void VulkanDriver::Update3DImage(TextureHandle th, uint32_t level, uint32_t xoff
 
 AsyncCallId VulkanDriver::Update3DImageAsyncS() noexcept { return 0; }
 
-void VulkanDriver::Update3DImageAsyncR(AsyncCallId jobId, TextureHandle th, uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-                                       uint32_t width, uint32_t height, uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
+void VulkanDriver::Update3DImageAsyncR(AsyncCallId jobId, TextureHandle th, uint32_t level, uint32_t xoffset,
+                                       uint32_t yoffset, uint32_t zoffset, uint32_t width, uint32_t height,
+                                       uint32_t depth, PixelBufferDescriptor&& data, CallbackHandler* handler,
                                        CallbackHandler::Callback callback, void* user) {}
 
 Handle<HwTexture> VulkanDriver::CreateTextureS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
-void VulkanDriver::CreateTextureR(TextureHandle th, SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width,
-                                  uint32_t height, uint32_t depth, TextureUsage usage, NS_UTILS::ImmutableString&& tag) {
-    auto texture = m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context, m_allocator, m_resMgr,
-                                                 &m_commands, target, levels, format, samples, width, height, depth, usage, m_stagePool);
+void VulkanDriver::CreateTextureR(TextureHandle th, SamplerType target, uint8_t levels, TextureFormat format,
+                                  uint8_t samples, uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage,
+                                  NS_UTILS::ImmutableString&& tag) {
+    auto texture = m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(),
+                                                 m_context, m_allocator, m_resMgr, m_commands, target, levels, format,
+                                                 samples, width, height, depth, usage, m_stagePool);
 
     // 新建纹理须立即转换到默认布局，否则首次作为附件或采样源时布局不匹配
-    VulkanCommandBuffer& commands = m_commands.Get();
+    VulkanCommandBuffer& commands = m_commands->Get();
     texture->TransitionLayout(&commands, texture->GetPrimaryViewRange(), texture->GetDefaultLayout());
 
     m_resMgr->AssociateTagToHandle(th.GetId(), std::move(tag));
@@ -426,36 +459,42 @@ void VulkanDriver::CreateTextureR(TextureHandle th, SamplerType target, uint8_t 
 
 Handle<HwTexture> VulkanDriver::CreateTextureAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
-void VulkanDriver::CreateTextureAsyncR(TextureHandle th, SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples, uint32_t width,
-                                       uint32_t height, uint32_t depth, TextureUsage usage, CallbackHandler* handler,
-                                       CallbackHandler::Callback callback, void* user, NS_UTILS::ImmutableString&& tag) {}
+void VulkanDriver::CreateTextureAsyncR(TextureHandle th, SamplerType target, uint8_t levels, TextureFormat format,
+                                       uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
+                                       TextureUsage usage, CallbackHandler* handler, CallbackHandler::Callback callback,
+                                       void* user, NS_UTILS::ImmutableString&& tag) {}
 
 Handle<HwTexture> VulkanDriver::CreateTextureViewS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
 void VulkanDriver::CreateTextureViewR(TextureHandle th, TextureHandle texture, uint8_t baseLevel, uint8_t levelCount,
                                       NS_UTILS::ImmutableString&& tag) {
     auto src = m_resMgr->Acquire<VulkanTexture>(texture);
-    m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context, m_allocator, &m_commands, src, baseLevel,
-                                  levelCount);
+    m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context,
+                                  m_allocator, m_commands, src, baseLevel, levelCount);
     m_resMgr->AssociateTagToHandle(th.GetId(), std::move(tag));
 }
 
 Handle<HwTexture> VulkanDriver::CreateTextureViewSwizzleS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
-void VulkanDriver::CreateTextureViewSwizzleR(TextureHandle th, TextureHandle texture, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
-                                             TextureSwizzle a, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateTextureViewSwizzleR(TextureHandle th, TextureHandle texture, TextureSwizzle r,
+                                             TextureSwizzle g, TextureSwizzle b, TextureSwizzle a,
+                                             NS_UTILS::ImmutableString&& tag) {
     TextureSwizzle const     swizzleArray[] = { r, g, b, a };
     VkComponentMapping const swizzle        = VK_UTILS::GetSwizzleMap(swizzleArray);
     auto                     src            = m_resMgr->Acquire<VulkanTexture>(texture);
-    m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context, m_allocator, &m_commands, src, swizzle);
+    m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context,
+                                  m_allocator, m_commands, src, swizzle);
     m_resMgr->AssociateTagToHandle(th.GetId(), std::move(tag));
 }
 
-Handle<HwTexture> VulkanDriver::CreateTextureViewSwizzleAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
+Handle<HwTexture> VulkanDriver::CreateTextureViewSwizzleAsyncS() noexcept {
+    return m_resMgr->AllocHandle<VulkanTexture>();
+}
 
-void VulkanDriver::CreateTextureViewSwizzleAsyncR(TextureHandle th, TextureHandle texture, TextureSwizzle r, TextureSwizzle g, TextureSwizzle b,
-                                                  TextureSwizzle a, CallbackHandler* handler, CallbackHandler::Callback callback, void* user,
-                                                  NS_UTILS::ImmutableString&& tag) {}
+void VulkanDriver::CreateTextureViewSwizzleAsyncR(TextureHandle th, TextureHandle texture, TextureSwizzle r,
+                                                  TextureSwizzle g, TextureSwizzle b, TextureSwizzle a,
+                                                  CallbackHandler* handler, CallbackHandler::Callback callback,
+                                                  void* user, NS_UTILS::ImmutableString&& tag) {}
 
 void VulkanDriver::DestroyTexture(TextureHandle th) {
     if (!th) {
@@ -491,61 +530,78 @@ void VulkanDriver::GenerateMipmaps(TextureHandle th) {
             dst.texture = t;
             VulkanAttachment src{ .level = level, .layer = layer };
             src.texture = t;
-            m_blitter.Blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
+            m_blitter->Blit(VK_FILTER_LINEAR, dst, dstOffsets, src, srcOffsets);
         }
 
         srcw = dstw;
         srch = dsth;
     } while ((srcw > 1 || srch > 1) && ++level < t->levels - 1);
 
-    VulkanCommandBuffer* commandBuffer = &m_commands.Get();
+    VulkanCommandBuffer* commandBuffer = &m_commands->Get();
     t->TransitionLayout(commandBuffer, t->GetPrimaryViewRange(), t->GetDefaultLayout());
 }
 
-void VulkanDriver::CreateTextureExternalImage2R(TextureHandle th, SamplerType target, TextureFormat format, uint32_t width, uint32_t height,
-                                                TextureUsage usage, Platform::ExternalImageHandleRef image, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateTextureExternalImage2R(TextureHandle th, SamplerType target, TextureFormat format,
+                                                uint32_t width, uint32_t height, TextureUsage usage,
+                                                Platform::ExternalImageHandleRef image,
+                                                NS_UTILS::ImmutableString&&      tag) {
     LOG_WARN("CreateTextureExternalImage2 未实现：外部图像路径已按设计砍掉");
 }
 
-Handle<HwTexture> VulkanDriver::CreateTextureExternalImage2S() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
+Handle<HwTexture> VulkanDriver::CreateTextureExternalImage2S() noexcept {
+    return m_resMgr->AllocHandle<VulkanTexture>();
+}
 
-void VulkanDriver::CreateTextureExternalImageR(TextureHandle th, SamplerType target, TextureFormat format, uint32_t width, uint32_t height,
-                                               TextureUsage usage, void* image, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateTextureExternalImageR(TextureHandle th, SamplerType target, TextureFormat format,
+                                               uint32_t width, uint32_t height, TextureUsage usage, void* image,
+                                               NS_UTILS::ImmutableString&& tag) {
     LOG_WARN("CreateTextureExternalImage 未实现：外部图像路径已按设计砍掉");
 }
 
-Handle<HwTexture> VulkanDriver::CreateTextureExternalImageS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
+Handle<HwTexture> VulkanDriver::CreateTextureExternalImageS() noexcept {
+    return m_resMgr->AllocHandle<VulkanTexture>();
+}
 
-void VulkanDriver::CreateTextureExternalImagePlaneR(TextureHandle th, TextureFormat format, uint32_t width, uint32_t height, TextureUsage usage,
-                                                    void* image, uint32_t plane, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateTextureExternalImagePlaneR(TextureHandle th, TextureFormat format, uint32_t width,
+                                                    uint32_t height, TextureUsage usage, void* image, uint32_t plane,
+                                                    NS_UTILS::ImmutableString&& tag) {
     LOG_WARN("CreateTextureExternalImagePlane 未实现：外部图像路径已按设计砍掉");
 }
 
-Handle<HwTexture> VulkanDriver::CreateTextureExternalImagePlaneS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
+Handle<HwTexture> VulkanDriver::CreateTextureExternalImagePlaneS() noexcept {
+    return m_resMgr->AllocHandle<VulkanTexture>();
+}
 
-void VulkanDriver::ImportTextureR(TextureHandle th, intptr_t id, SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-                                  uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::ImportTextureR(TextureHandle th, intptr_t id, SamplerType target, uint8_t levels,
+                                  TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+                                  uint32_t depth, TextureUsage usage, NS_UTILS::ImmutableString&& tag) {
     LOG_WARN("ImportTexture 未实现：外部图像路径已按设计砍掉");
 }
 
 Handle<HwTexture> VulkanDriver::ImportTextureS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
-void VulkanDriver::ImportTextureAsyncR(TextureHandle th, intptr_t id, SamplerType target, uint8_t levels, TextureFormat format, uint8_t samples,
-                                       uint32_t width, uint32_t height, uint32_t depth, TextureUsage usage, CallbackHandler* handler,
-                                       CallbackHandler::Callback callback, void* user, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::ImportTextureAsyncR(TextureHandle th, intptr_t id, SamplerType target, uint8_t levels,
+                                       TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+                                       uint32_t depth, TextureUsage usage, CallbackHandler* handler,
+                                       CallbackHandler::Callback callback, void* user,
+                                       NS_UTILS::ImmutableString&& tag) {
     LOG_WARN("ImportTextureAsync 未实现：外部图像路径已按设计砍掉");
 }
 
 Handle<HwTexture> VulkanDriver::ImportTextureAsyncS() noexcept { return m_resMgr->AllocHandle<VulkanTexture>(); }
 
-void VulkanDriver::SetupExternalImage2(Platform::ExternalImageHandleRef image) { LOG_WARN("SetupExternalImage2 未实现：外部图像路径已按设计砍掉"); }
+void VulkanDriver::SetupExternalImage2(Platform::ExternalImageHandleRef image) {
+    LOG_WARN("SetupExternalImage2 未实现：外部图像路径已按设计砍掉");
+}
 
 void VulkanDriver::SetupExternalImage(void* image) { LOG_WARN("SetupExternalImage 未实现：外部图像路径已按设计砍掉"); }
 
-Handle<HwRenderPrimitive> VulkanDriver::CreateRenderPrimitiveS() noexcept { return m_resMgr->AllocHandle<VulkanRenderPrimitive>(); }
+Handle<HwRenderPrimitive> VulkanDriver::CreateRenderPrimitiveS() noexcept {
+    return m_resMgr->AllocHandle<VulkanRenderPrimitive>();
+}
 
-void VulkanDriver::CreateRenderPrimitiveR(RenderPrimitiveHandle rph, VertexBufferHandle vbh, IndexBufferHandle ibh, PrimitiveType pt,
-                                          NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateRenderPrimitiveR(RenderPrimitiveHandle rph, VertexBufferHandle vbh, IndexBufferHandle ibh,
+                                          PrimitiveType pt, NS_UTILS::ImmutableString&& tag) {
     auto vb = m_resMgr->Acquire<VulkanVertexBuffer>(vbh);
     // 无索引缓冲的图元合法：走 vkCmdDraw 而非 vkCmdDrawIndexed
     VulkanIndexBufferPtr ib;
@@ -581,9 +637,9 @@ void VulkanDriver::CreateProgramR(ProgramHandle ph, Program&& program, NS_UTILS:
     for (auto const& layoutBinding : program.GetDescriptorSetLayouts()) {
         DescriptorSetLayout layoutDescription = layoutBinding.layout;
         auto                layoutHandle      = m_resMgr->AllocHandle<VulkanDescriptorSetLayout>();
-        auto                layout            = m_descriptorSetLayoutCache.CreateLayout(layoutHandle, std::move(layoutDescription));
-        layouts[layoutBinding.set]            = layout;
-        vkLayouts[layoutBinding.set]          = layout->GetVkLayout();
+        auto layout = m_descriptorSetLayoutCache->CreateLayout(layoutHandle, std::move(layoutDescription));
+        layouts[layoutBinding.set]   = layout;
+        vkLayouts[layoutBinding.set] = layout->GetVkLayout();
         if (layout->HasExternalSamplers()) {
             hasExternalSamplers = true;
         }
@@ -594,28 +650,31 @@ void VulkanDriver::CreateProgramR(ProgramHandle ph, Program&& program, NS_UTILS:
         stereoscopicType = StereoscopicType::None;
     }
 
-    m_pipelineCache.AsyncPrewarmCache(vprogram, m_pipelineLayoutCache.GetLayout(vkLayouts, vprogram), stereoscopicType, mStereoscopicEyeCount,
-                                      program.GetPriorityQueue());
+    m_pipelineCache->AsyncPrewarmCache(vprogram, m_pipelineLayoutCache->GetLayout(vkLayouts, vprogram), stereoscopicType,
+                                      mStereoscopicEyeCount, program.GetPriorityQueue());
 
     if (!hasExternalSamplers) {
         return;
     }
 
     for (auto const& format : m_context->GetPipelineCachePrewarmExternalFormats()) {
-        VkSamplerYcbcrConversion const vkConversion    = m_ycbcrConversionCache.GetConversion(GetYcbcrConversionParams(format));
-        VkSampler const                externalSampler = m_samplerCache.GetSampler({ .sampler = {}, .conversion = vkConversion });
+        VkSamplerYcbcrConversion const vkConversion =
+            m_ycbcrConversionCache->GetConversion(GetYcbcrConversionParams(format));
+        VkSampler const externalSampler = m_samplerCache->GetSampler({ .sampler = {}, .conversion = vkConversion });
 
         for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
             if (!layouts[i]) {
                 continue;
             }
             // 预热只需要「大致像」的采样器组合：遍历可能出现的采样器类型即可命中驱动缓存
-            std::vector<std::pair<uint64_t, VkSampler>> externalSamplers(layouts[i]->bitmask.externalSampler.Count(), { 0, externalSampler });
-            vkLayouts[i] = m_descriptorSetLayoutCache.GetVkLayout(layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
+            std::vector<std::pair<uint64_t, VkSampler>> externalSamplers(layouts[i]->bitmask.externalSampler.Count(),
+                                                                         { 0, externalSampler });
+            vkLayouts[i] = m_descriptorSetLayoutCache->GetVkLayout(
+                layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
         }
 
-        m_pipelineCache.AsyncPrewarmCache(vprogram, m_pipelineLayoutCache.GetLayout(vkLayouts, vprogram), stereoscopicType, mStereoscopicEyeCount,
-                                          program.GetPriorityQueue());
+        m_pipelineCache->AsyncPrewarmCache(vprogram, m_pipelineLayoutCache->GetLayout(vkLayouts, vprogram),
+                                          stereoscopicType, mStereoscopicEyeCount, program.GetPriorityQueue());
     }
 }
 
@@ -628,17 +687,20 @@ void VulkanDriver::DestroyProgram(ProgramHandle ph) {
     m_resMgr->Destroy(vprogram);
 }
 
-void VulkanDriver::CompilePrograms(CompilerPriorityQueue priority, CallbackHandler* handler, CallbackHandler::Callback callback, void* user) {
+void VulkanDriver::CompilePrograms(CompilerPriorityQueue priority, CallbackHandler* handler,
+                                   CallbackHandler::Callback callback, void* user) {
     if (callback) {
         if (m_context->IsPipelineCachePrewarmingEnabled()) {
-            m_pipelineCache.AddCachePrewarmCallback(handler, callback, user);
+            m_pipelineCache->AddCachePrewarmCallback(handler, callback, user);
         } else {
             ScheduleCallback(handler, user, callback);
         }
     }
 }
 
-Handle<HwRenderTarget> VulkanDriver::CreateDefaultRenderTargetS() noexcept { return m_resMgr->AllocHandle<VulkanRenderTarget>(); }
+Handle<HwRenderTarget> VulkanDriver::CreateDefaultRenderTargetS() noexcept {
+    return m_resMgr->AllocHandle<VulkanRenderTarget>();
+}
 
 void VulkanDriver::CreateDefaultRenderTargetR(RenderTargetHandle rth, NS_UTILS::ImmutableString&& tag) {
     // 构造期已建好默认渲染目标，此处只是把内容交给新句柄
@@ -647,10 +709,13 @@ void VulkanDriver::CreateDefaultRenderTargetR(RenderTargetHandle rth, NS_UTILS::
     m_resMgr->AssociateTagToHandle(rth.GetId(), std::move(tag));
 }
 
-Handle<HwRenderTarget> VulkanDriver::CreateRenderTargetS() noexcept { return m_resMgr->AllocHandle<VulkanRenderTarget>(); }
+Handle<HwRenderTarget> VulkanDriver::CreateRenderTargetS() noexcept {
+    return m_resMgr->AllocHandle<VulkanRenderTarget>();
+}
 
-void VulkanDriver::CreateRenderTargetR(RenderTargetHandle rth, TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height, uint8_t samples,
-                                       uint8_t layerCount, MRT color, TargetBufferInfo depth, TargetBufferInfo stencil,
+void VulkanDriver::CreateRenderTargetR(RenderTargetHandle rth, TargetBufferFlags targetBufferFlags, uint32_t width,
+                                       uint32_t height, uint8_t samples, uint8_t layerCount, MRT color,
+                                       TargetBufferInfo depth, TargetBufferInfo stencil,
                                        NS_UTILS::ImmutableString&& tag) {
     size_t           attachmentCount                                      = 0;
     VulkanAttachment colorTargets[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT] = {};
@@ -682,8 +747,9 @@ void VulkanDriver::CreateRenderTargetR(RenderTargetHandle rth, TargetBufferFlags
 
     LOG_ASSERT(attachmentCount > 0);
 
-    m_resMgr->Make<VulkanRenderTarget>(rth, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context, m_resMgr, m_allocator, &m_commands,
-                                       width, height, samples, colorTargets, depthStencil, m_stagePool, layerCount);
+    m_resMgr->Make<VulkanRenderTarget>(rth, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context,
+                                       m_resMgr, m_allocator, m_commands, width, height, samples, colorTargets,
+                                       depthStencil, m_stagePool, layerCount);
 
     m_resMgr->AssociateTagToHandle(rth.GetId(), std::move(tag));
 }
@@ -701,7 +767,8 @@ void VulkanDriver::DestroyRenderTarget(RenderTargetHandle rth) {
 
 Handle<HwSwapChain> VulkanDriver::CreateSwapChainS() noexcept { return m_resMgr->AllocHandle<VulkanSwapChain>(); }
 
-void VulkanDriver::CreateSwapChainR(SwapChainHandle sch, void* nativeWindow, uint64_t flags, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateSwapChainR(SwapChainHandle sch, void* nativeWindow, uint64_t flags,
+                                    NS_UTILS::ImmutableString&& tag) {
     // 旧交换链必须先释放，否则 vkCreateSwapchainKHR 会以 VK_ERROR_NATIVE_WINDOW_IN_USE_KHR 失败
     m_resMgr->Gc();
 
@@ -713,24 +780,28 @@ void VulkanDriver::CreateSwapChainR(SwapChainHandle sch, void* nativeWindow, uin
         LOG_WARN("protected swapchain requested, but Platform does not support it");
     }
 
-    m_resMgr->Make<VulkanSwapChain>(sch, mPlatform, m_context, m_resMgr, m_allocator, &m_commands, m_stagePool, nativeWindow, flags);
+    m_resMgr->Make<VulkanSwapChain>(sch, mPlatform, m_context, m_resMgr, m_allocator, m_commands, m_stagePool,
+                                    nativeWindow, flags);
     m_resMgr->AssociateTagToHandle(sch.GetId(), std::move(tag));
 
     std::lock_guard const lock(mTiming.lock);
     mTiming.nativeSwapchains.emplace(sch.GetId(), nullptr);
 }
 
-Handle<HwSwapChain> VulkanDriver::CreateSwapChainHeadlessS() noexcept { return m_resMgr->AllocHandle<VulkanSwapChain>(); }
+Handle<HwSwapChain> VulkanDriver::CreateSwapChainHeadlessS() noexcept {
+    return m_resMgr->AllocHandle<VulkanSwapChain>();
+}
 
-void VulkanDriver::CreateSwapChainHeadlessR(SwapChainHandle sch, uint32_t width, uint32_t height, uint64_t flags, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateSwapChainHeadlessR(SwapChainHandle sch, uint32_t width, uint32_t height, uint64_t flags,
+                                            NS_UTILS::ImmutableString&& tag) {
     if ((flags & kSwapChainConfigSRGBColorspace) != 0 && !IsSRGBSwapChainSupported()) {
         LOG_WARN("sRGB swapchain requested, but Platform does not support it");
         flags = flags & ~kSwapChainConfigSRGBColorspace;
     }
     LOG_ASSERT(width > 0 && height > 0 && "Vulkan requires non-zero swap chain dimensions.");
 
-    m_resMgr->Make<VulkanSwapChain>(sch, mPlatform, m_context, m_resMgr, m_allocator, &m_commands, m_stagePool, nullptr, flags,
-                                    VkExtent2D{ width, height });
+    m_resMgr->Make<VulkanSwapChain>(sch, mPlatform, m_context, m_resMgr, m_allocator, m_commands, m_stagePool, nullptr,
+                                    flags, VkExtent2D{ width, height });
     m_resMgr->AssociateTagToHandle(sch.GetId(), std::move(tag));
 }
 
@@ -760,9 +831,9 @@ void VulkanDriver::CreateSyncR(SyncHandle sh, NS_UTILS::ImmutableString&& tag) {
     if (mCurrentRenderPass.commandBuffer) {
         fenceStatus = mCurrentRenderPass.commandBuffer->GetFenceStatus();
         // 正在录制：先提交，围栏才只覆盖已发出的命令
-        m_commands.Flush();
+        m_commands->Flush();
     } else {
-        fenceStatus = m_commands.GetMostRecentFenceStatus();
+        fenceStatus = m_commands->GetMostRecentFenceStatus();
     }
 
     {
@@ -814,7 +885,8 @@ FenceHandle VulkanDriver::createFenceS() noexcept {
 }
 
 void VulkanDriver::createFenceR(FenceHandle fh, NS_UTILS::ImmutableString&& tag) {
-    VulkanCommandBuffer* cmdbuf = mCurrentRenderPass.commandBuffer ? mCurrentRenderPass.commandBuffer : &m_commands.Get();
+    VulkanCommandBuffer* cmdbuf =
+        mCurrentRenderPass.commandBuffer ? mCurrentRenderPass.commandBuffer : &m_commands->Get();
     // 句柄已在 createFenceS 里构造好，这里只补上与当前录制命令缓冲对应的围栏
     auto fence = m_resMgr->Acquire<VulkanFence>(fh);
     SignalFence([&] { fence->SetFence(cmdbuf->GetFenceStatus()); });
@@ -852,7 +924,8 @@ FenceStatus VulkanDriver::FenceWait(FenceHandle fh, uint64_t timeout) {
     using TimeoutType                = decltype(timeout);
     constexpr TimeoutType maxTimeout = std::numeric_limits<TimeoutType>::max();
     constexpr nanoseconds maxNano    = nanoseconds::max();
-    if (timeout < maxNano.count() && timeout < maxTimeout && now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
+    if (timeout < maxNano.count() && timeout < maxTimeout &&
+        now <= steady_clock::time_point::max() - nanoseconds(timeout)) {
         until = now + nanoseconds(timeout);
     }
 
@@ -884,7 +957,7 @@ FenceStatus VulkanDriver::FenceWait(FenceHandle fh, uint64_t timeout) {
 
 Handle<HwTimerQuery> VulkanDriver::CreateTimerQueryS() noexcept {
     // 句柄必须在此构造：getTimerQueryValue 的同步调用可能先于 CreateTimerQueryR 发生
-    auto query = m_queryManager.GetNextQuery(m_resMgr);
+    auto query = m_queryManager->GetNextQuery(m_resMgr);
     return Handle<HwTimerQuery>(query->GetId());
 }
 
@@ -898,18 +971,18 @@ void VulkanDriver::DestroyTimerQuery(TimerQueryHandle tqh) {
         return;
     }
     auto vtq = m_resMgr->Acquire<VulkanTimerQuery>(tqh);
-    m_queryManager.ClearQuery(vtq);
+    m_queryManager->ClearQuery(vtq);
     m_resMgr->Destroy(vtq);
 }
 
 void VulkanDriver::BeginTimerQuery(TimerQueryHandle tqh) {
     auto vtq = m_resMgr->Acquire<VulkanTimerQuery>(tqh);
-    m_queryManager.BeginQuery(&m_commands.Get(), vtq);
+    m_queryManager->BeginQuery(&m_commands->Get(), vtq);
 }
 
 void VulkanDriver::EndTimerQuery(TimerQueryHandle tqh) {
     auto vtq = m_resMgr->Acquire<VulkanTimerQuery>(tqh);
-    m_queryManager.EndQuery(&m_commands.Get(), vtq);
+    m_queryManager->EndQuery(&m_commands->Get(), vtq);
 }
 
 TimerQueryResult VulkanDriver::GetTimerQueryValue(TimerQueryHandle tqh, uint64_t* elapsedTime) {
@@ -918,7 +991,7 @@ TimerQueryResult VulkanDriver::GetTimerQueryValue(TimerQueryHandle tqh, uint64_t
         return TimerQueryResult::NotReady;
     }
 
-    auto const results = m_queryManager.GetResult(vtq);
+    auto const results = m_queryManager->GetResult(vtq);
     if (results.beginAvailable == 0 || results.endAvailable == 0) {
         return TimerQueryResult::NotReady;
     }
@@ -938,10 +1011,13 @@ TimerQueryResult VulkanDriver::GetTimerQueryValue(TimerQueryHandle tqh, uint64_t
     return TimerQueryResult::Available;
 }
 
-Handle<HwDescriptorSetLayout> VulkanDriver::CreateDescriptorSetLayoutS() noexcept { return m_resMgr->AllocHandle<VulkanDescriptorSetLayout>(); }
+Handle<HwDescriptorSetLayout> VulkanDriver::CreateDescriptorSetLayoutS() noexcept {
+    return m_resMgr->AllocHandle<VulkanDescriptorSetLayout>();
+}
 
-void VulkanDriver::CreateDescriptorSetLayoutR(DescriptorSetLayoutHandle dslh, DescriptorSetLayout&& info, NS_UTILS::ImmutableString&& tag) {
-    m_descriptorSetLayoutCache.CreateLayout(dslh, std::move(info));
+void VulkanDriver::CreateDescriptorSetLayoutR(DescriptorSetLayoutHandle dslh, DescriptorSetLayout&& info,
+                                              NS_UTILS::ImmutableString&& tag) {
+    m_descriptorSetLayoutCache->CreateLayout(dslh, std::move(info));
     m_resMgr->AssociateTagToHandle(dslh.GetId(), std::move(tag));
 }
 
@@ -953,12 +1029,15 @@ void VulkanDriver::DestroyDescriptorSetLayout(DescriptorSetLayoutHandle dslh) {
     m_resMgr->Destroy(layout);
 }
 
-Handle<HwDescriptorSet> VulkanDriver::CreateDescriptorSetS() noexcept { return m_resMgr->AllocHandle<VulkanDescriptorSet>(); }
+Handle<HwDescriptorSet> VulkanDriver::CreateDescriptorSetS() noexcept {
+    return m_resMgr->AllocHandle<VulkanDescriptorSet>();
+}
 
-void VulkanDriver::CreateDescriptorSetR(DescriptorSetHandle dsh, DescriptorSetLayoutHandle dslh, NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::CreateDescriptorSetR(DescriptorSetHandle dsh, DescriptorSetLayoutHandle dslh,
+                                        NS_UTILS::ImmutableString&& tag) {
     // 句柄实参类型必须是具体类型：池块尺寸取自该类型
     auto layout = m_resMgr->Acquire<VulkanDescriptorSetLayout>(dslh);
-    m_descriptorSetCache.CreateSet(dsh, layout);
+    m_descriptorSetCache->CreateSet(dsh, layout);
 
     if (layout->HasExternalSamplers()) {
         mAppState.hasExternalSamplerLayouts = true;
@@ -975,27 +1054,30 @@ void VulkanDriver::DestroyDescriptorSet(DescriptorSetHandle dsh) {
     m_resMgr->Destroy(set);
 }
 
-void VulkanDriver::UpdateDescriptorSetBuffer(DescriptorSetHandle dsh, descriptor_binding_t binding, BufferObjectHandle boh, uint32_t offset,
-                                             uint32_t size) {
+void VulkanDriver::UpdateDescriptorSetBuffer(DescriptorSetHandle dsh, descriptor_binding_t binding,
+                                             BufferObjectHandle boh, uint32_t offset, uint32_t size) {
     auto set    = m_resMgr->Acquire<VulkanDescriptorSet>(dsh);
     auto buffer = m_resMgr->Acquire<VulkanBufferObject>(boh);
-    m_descriptorSetCache.UpdateBuffer(set, binding, buffer, offset, size);
+    m_descriptorSetCache->UpdateBuffer(set, binding, buffer, offset, size);
 }
 
-void VulkanDriver::UpdateDescriptorSetTexture(DescriptorSetHandle dsh, descriptor_binding_t binding, TextureHandle th, SamplerParams params) {
+void VulkanDriver::UpdateDescriptorSetTexture(DescriptorSetHandle dsh, descriptor_binding_t binding, TextureHandle th,
+                                              SamplerParams params) {
     auto set     = m_resMgr->Acquire<VulkanDescriptorSet>(dsh);
     auto texture = m_resMgr->Acquire<VulkanTexture>(th);
 
     // 外部图像/流的不可变采样器路径未移植：一律按普通采样器写入
     VulkanSamplerCache::Params const cacheParams = { .sampler = params };
-    VkSampler const                  vksampler   = m_samplerCache.GetSampler(cacheParams);
-    m_descriptorSetCache.UpdateSampler(set, binding, texture, vksampler);
+    VkSampler const                  vksampler   = m_samplerCache->GetSampler(cacheParams);
+    m_descriptorSetCache->UpdateSampler(set, binding, texture, vksampler);
 }
 
-MemoryMappedBufferHandle VulkanDriver::MapBufferS() noexcept { return m_resMgr->AllocHandle<VulkanMemoryMappedBuffer>(); }
+MemoryMappedBufferHandle VulkanDriver::MapBufferS() noexcept {
+    return m_resMgr->AllocHandle<VulkanMemoryMappedBuffer>();
+}
 
-void VulkanDriver::MapBufferR(MemoryMappedBufferHandle mmbh, BufferObjectHandle boh, size_t offset, size_t size, MapBufferAccessFlags access,
-                              NS_UTILS::ImmutableString&& tag) {
+void VulkanDriver::MapBufferR(MemoryMappedBufferHandle mmbh, BufferObjectHandle boh, size_t offset, size_t size,
+                              MapBufferAccessFlags access, NS_UTILS::ImmutableString&& tag) {
     auto mmb = m_resMgr->Make<VulkanMemoryMappedBuffer>(mmbh, boh, offset, size, access);
     m_resMgr->AssociateTagToHandle(mmbh.GetId(), std::move(tag));
 }
@@ -1039,7 +1121,7 @@ void VulkanDriver::BeginRenderPass(RenderTargetHandle rth, const RenderPassParam
         }
     }
 
-    VulkanCommandBuffer* commandBuffer = &m_commands.Get();
+    VulkanCommandBuffer* commandBuffer = &m_commands->Get();
 
     // 尺寸必须在 acquireNextSwapchainImage() 之后取，否则交换链路径下还是 0
     VkExtent2D const extent = rt->GetExtent();
@@ -1074,8 +1156,8 @@ void VulkanDriver::BeginRenderPass(RenderTargetHandle rth, const RenderPassParam
     rpkey.initialDepthStencilLayout     = currentDepthStencilLayout;
     rpkey.subpassMask                   = static_cast<uint8_t>(params.subpassMask);
 
-    VulkanRenderPassPtr renderPass = m_framebufferCache.GetRenderPass(rpkey, m_resMgr);
-    m_pipelineCache.BindRenderPass(renderPass, 0);
+    VulkanRenderPassPtr renderPass = m_framebufferCache->GetRenderPass(rpkey, m_resMgr);
+    m_pipelineCache->BindRenderPass(renderPass, 0);
 
     VulkanFboCache::FboKey fbkey = rt->GetFboKey();
     fbkey.renderPass             = renderPass->GetVkRenderPass();
@@ -1083,7 +1165,7 @@ void VulkanDriver::BeginRenderPass(RenderTargetHandle rth, const RenderPassParam
 
     rt->EmitBarriersBeginRenderPass(*commandBuffer);
 
-    VulkanFramebufferPtr vkfb = m_framebufferCache.GetFramebuffer(fbkey, m_resMgr, rt);
+    VulkanFramebufferPtr vkfb = m_framebufferCache->GetFramebuffer(fbkey, m_resMgr, rt);
 
     // 当前命令缓冲自此引用渲染目标与其附件，持有引用直到提交完成
     commandBuffer->Acquire(rt);
@@ -1201,11 +1283,11 @@ void VulkanDriver::NextSubpass(int) {
 
     vkCmdNextSubpass(mCurrentRenderPass.commandBuffer->Buffer(), VK_SUBPASS_CONTENTS_INLINE);
 
-    m_pipelineCache.BindRenderPass(mCurrentRenderPass.renderPass, ++mCurrentRenderPass.currentSubpass);
+    m_pipelineCache->BindRenderPass(mCurrentRenderPass.renderPass, ++mCurrentRenderPass.currentSubpass);
 
     if (mCurrentRenderPass.params.subpassMask & 0x1) {
         VulkanAttachment& subpassInput = renderTarget->GetColor(0);
-        m_descriptorSetCache.UpdateInputAttachment({}, subpassInput);
+        m_descriptorSetCache->UpdateInputAttachment({}, subpassInput);
     }
 }
 
@@ -1216,19 +1298,22 @@ void VulkanDriver::BindPipeline(PipelineState const& state) {
     auto&                         setLayouts = state.pipelineLayout.setLayout;
     DescriptorSetLayoutHandleList layoutHandles;
     uint8_t                       layoutCount = 0;
-    std::transform(setLayouts.begin(), setLayouts.end(), layoutHandles.begin(), [&](auto const& handle) -> VulkanDescriptorSetLayoutPtr {
-        if (!handle) {
-            return {};
-        }
-        layoutCount++;
-        return m_resMgr->Acquire<VulkanDescriptorSetLayout>(handle);
-    });
+    std::transform(setLayouts.begin(), setLayouts.end(), layoutHandles.begin(),
+                   [&](auto const& handle) -> VulkanDescriptorSetLayoutPtr {
+                       if (!handle) {
+                           return {};
+                       }
+                       layoutCount++;
+                       return m_resMgr->Acquire<VulkanDescriptorSetLayout>(handle);
+                   });
 
     constexpr uint8_t                 kDescriptorSetMaskTable[4] = { 0x1, 0x3, 0x7, 0xF };
     VK_UTILS::DescriptorSetMask const descriptorSetMask(kDescriptorSetMaskTable[layoutCount]);
 
     if (mAppState.HasExternalSamplers()) {
-        auto const haveExternalSamplers = [](auto const& layoutHandle) { return layoutHandle ? layoutHandle->HasExternalSamplers() : false; };
+        auto const haveExternalSamplers = [](auto const& layoutHandle) {
+            return layoutHandle ? layoutHandle->HasExternalSamplers() : false;
+        };
         if (std::any_of(layoutHandles.begin(), layoutHandles.end(), haveExternalSamplers)) {
             BindInDrawBundle bundle = {
                 .pipelineState     = state,
@@ -1241,14 +1326,16 @@ void VulkanDriver::BindPipeline(PipelineState const& state) {
     }
 
     VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts;
-    std::transform(layoutHandles.begin(), layoutHandles.end(), vkLayouts.begin(),
-                   [](auto const& layout) -> VkDescriptorSetLayout { return layout ? layout->GetVkLayout() : VK_NULL_HANDLE; });
+    std::transform(
+        layoutHandles.begin(), layoutHandles.end(), vkLayouts.begin(),
+        [](auto const& layout) -> VkDescriptorSetLayout { return layout ? layout->GetVkLayout() : VK_NULL_HANDLE; });
     auto program        = m_resMgr->Acquire<VulkanProgram>(state.program);
-    auto pipelineLayout = m_pipelineLayoutCache.GetLayout(vkLayouts, program);
+    auto pipelineLayout = m_pipelineLayoutCache->GetLayout(vkLayouts, program);
     bindPipelineImpl(state, pipelineLayout, descriptorSetMask);
 }
 
-void VulkanDriver::bindPipelineImpl(PipelineState const& state, VkPipelineLayout pipelineLayout, VK_UTILS::DescriptorSetMask descriptorSetMask) {
+void VulkanDriver::bindPipelineImpl(PipelineState const& state, VkPipelineLayout pipelineLayout,
+                                    VK_UTILS::DescriptorSetMask descriptorSetMask) {
     if (skipDueToEmptyRenderPass()) {
         return;
     }
@@ -1294,19 +1381,19 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& state, VkPipelineLayout
     VkVertexInputBindingDescription const*   bufferDesc = vbi->GetBufferDescriptions();
 
     // 先把状态推给管线缓存（不产生 VK 调用），再由 bindPipeline 落成实际管线
-    m_pipelineCache.BindProgram(program);
-    m_pipelineCache.BindRasterState(vulkanRasterState);
-    m_pipelineCache.BindStencilState(state.stencilState);
-    m_pipelineCache.BindPrimitiveTopology(topology);
-    m_pipelineCache.BindVertexArray(attribDesc, bufferDesc, vbi->GetAttributeCount());
+    m_pipelineCache->BindProgram(program);
+    m_pipelineCache->BindRasterState(vulkanRasterState);
+    m_pipelineCache->BindStencilState(state.stencilState);
+    m_pipelineCache->BindPrimitiveTopology(topology);
+    m_pipelineCache->BindVertexArray(attribDesc, bufferDesc, vbi->GetAttributeCount());
 
     // 不能整体重置 mPipelineState：bindInDraw 的元数据要跨绑定保留
     mPipelineState.program           = program;
     mPipelineState.pipelineLayout    = pipelineLayout;
     mPipelineState.descriptorSetMask = descriptorSetMask;
 
-    m_pipelineCache.BindLayout(pipelineLayout);
-    m_pipelineCache.BindPipeline(mCurrentRenderPass.commandBuffer);
+    m_pipelineCache->BindLayout(pipelineLayout);
+    m_pipelineCache->BindPipeline(mCurrentRenderPass.commandBuffer);
 }
 
 void VulkanDriver::BindRenderPrimitive(RenderPrimitiveHandle rph) {
@@ -1344,11 +1431,12 @@ void VulkanDriver::BindRenderPrimitive(RenderPrimitiveHandle rph) {
     }
 }
 
-void VulkanDriver::BindDescriptorSet(DescriptorSetHandle dsh, descriptor_set_t setIndex, DescriptorSetOffsetArray&& offsets) {
+void VulkanDriver::BindDescriptorSet(DescriptorSetHandle dsh, descriptor_set_t setIndex,
+                                     DescriptorSetOffsetArray&& offsets) {
     if (dsh) {
         auto set = m_resMgr->Acquire<VulkanDescriptorSet>(dsh);
 
-        m_descriptorSetCache.Bind(setIndex, set, std::move(offsets));
+        m_descriptorSetCache->Bind(setIndex, set, std::move(offsets));
 
         if (set->isAnExternalSamplerBound) {
             auto const& bindInDrawBundle = mPipelineState.bindInDraw.second;
@@ -1359,7 +1447,7 @@ void VulkanDriver::BindDescriptorSet(DescriptorSetHandle dsh, descriptor_set_t s
             }
         }
     } else {
-        m_descriptorSetCache.Unbind(setIndex);
+        m_descriptorSetCache->Unbind(setIndex);
     }
 }
 
@@ -1370,14 +1458,14 @@ void VulkanDriver::prepareDraw() {
 
     auto const& [doBindInDraw, bundle] = mPipelineState.bindInDraw;
     if (doBindInDraw) {
-        VulkanDescriptorSetCache::DescriptorSetArray const& boundSets = m_descriptorSetCache.GetBoundSets();
+        VulkanDescriptorSetCache::DescriptorSetArray const& boundSets = m_descriptorSetCache->GetBoundSets();
         VulkanDescriptorSetLayout::DescriptorSetLayoutArray vklayouts;
         for (size_t i = 0; i < boundSets.size(); i++) {
             // 描述符集的最终布局在 bindDescriptorSet 时按需重建，此处直接取当前生效的
             vklayouts[i] = boundSets[i] ? boundSets[i]->boundLayout : VK_NULL_HANDLE;
         }
         auto                   program        = m_resMgr->Acquire<VulkanProgram>(bundle.pipelineState.program);
-        VkPipelineLayout const pipelineLayout = m_pipelineLayoutCache.GetLayout(vklayouts, program);
+        VkPipelineLayout const pipelineLayout = m_pipelineLayoutCache->GetLayout(vklayouts, program);
         if (pipelineLayout != mPipelineState.pipelineLayout) {
             bindPipelineImpl(bundle.pipelineState, pipelineLayout, bundle.descriptorSetMask);
             // 布局此前为空时收到的 push constant 尚未写出，此时统一冲刷
@@ -1385,7 +1473,8 @@ void VulkanDriver::prepareDraw() {
         }
         mPipelineState.bindInDraw.first = false;
     }
-    m_descriptorSetCache.Commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout, mPipelineState.descriptorSetMask);
+    m_descriptorSetCache->Commit(mCurrentRenderPass.commandBuffer, mPipelineState.pipelineLayout,
+                                mPipelineState.descriptorSetMask);
 }
 
 void VulkanDriver::Draw2(uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
@@ -1412,7 +1501,8 @@ void VulkanDriver::DrawArrays(uint32_t vertexOffset, uint32_t vertexCount, uint3
     vkCmdDraw(cmdbuffer, vertexCount, instanceCount, vertexOffset, firstInstId);
 }
 
-void VulkanDriver::Draw(PipelineState state, RenderPrimitiveHandle rph, uint32_t indexOffset, uint32_t indexCount, uint32_t instanceCount) {
+void VulkanDriver::Draw(PipelineState state, RenderPrimitiveHandle rph, uint32_t indexOffset, uint32_t indexCount,
+                        uint32_t instanceCount) {
     // 图元类型与顶点缓冲信息由图元决定，调用方传入的不可信
     auto rp                = m_resMgr->Acquire<VulkanRenderPrimitive>(rph);
     state.primitiveType    = rp->type;
@@ -1477,7 +1567,8 @@ void VulkanDriver::SetPushConstant(ShaderStage stage, uint8_t index, PushConstan
     }
     LOG_ASSERT(mPipelineState.program && "Expect a program when writing to push constants");
     LOG_ASSERT(mCurrentRenderPass.commandBuffer && "Should be called within a renderpass");
-    mPipelineState.program->WritePushConstant(mCurrentRenderPass.commandBuffer->Buffer(), mPipelineState.pipelineLayout, stage, index, value);
+    mPipelineState.program->WritePushConstant(mCurrentRenderPass.commandBuffer->Buffer(), mPipelineState.pipelineLayout,
+                                              stage, index, value);
 }
 
 bool VulkanDriver::acquireNextSwapchainImage() {
@@ -1494,7 +1585,7 @@ bool VulkanDriver::acquireNextSwapchainImage() {
 
     auto const [acquired, backingChanged] = mCurrentSwapChain->Acquire();
     if (backingChanged) {
-        m_framebufferCache.ResetFramebuffers();
+        m_framebufferCache->ResetFramebuffers();
     }
 
     if (acquired) {
@@ -1625,13 +1716,15 @@ FeatureLevel VulkanDriver::GetFeatureLevel() {
 
     // 采样器数量达不到 FL2 标准即为 FL1
     auto const& fl2 = kFeatureLevelCaps[static_cast<size_t>(FeatureLevel::FEATURE_LEVEL_2)];
-    if (limits.maxPerStageDescriptorSamplers < fl2.maxVertexSamplerCount || limits.maxPerStageDescriptorSamplers < fl2.maxFragmentSamplerCount) {
+    if (limits.maxPerStageDescriptorSamplers < fl2.maxVertexSamplerCount ||
+        limits.maxPerStageDescriptorSamplers < fl2.maxFragmentSamplerCount) {
         return FeatureLevel::FEATURE_LEVEL_1;
     }
 
     // 采样器数量达不到 FL3 标准即为 FL2
     auto const& fl3 = kFeatureLevelCaps[static_cast<size_t>(FeatureLevel::FEATURE_LEVEL_3)];
-    if (limits.maxPerStageDescriptorSamplers < fl3.maxVertexSamplerCount || limits.maxPerStageDescriptorSamplers < fl3.maxFragmentSamplerCount) {
+    if (limits.maxPerStageDescriptorSamplers < fl3.maxVertexSamplerCount ||
+        limits.maxPerStageDescriptorSamplers < fl3.maxFragmentSamplerCount) {
         return FeatureLevel::FEATURE_LEVEL_2;
     }
 
@@ -1665,11 +1758,14 @@ size_t VulkanDriver::GetMaxTextureSize(SamplerType target) {
 
 size_t VulkanDriver::GetMaxArrayTextureLayers() { return m_context->GetPhysicalDeviceLimits().maxImageArrayLayers; }
 
-size_t VulkanDriver::GetUniformBufferOffsetAlignment() { return m_context->GetPhysicalDeviceLimits().minUniformBufferOffsetAlignment; }
+size_t VulkanDriver::GetUniformBufferOffsetAlignment() {
+    return m_context->GetPhysicalDeviceLimits().minUniformBufferOffsetAlignment;
+}
 
 bool VulkanDriver::IsCompositorTimingSupported() { return mPlatform->IsCompositorTimingSupported(); }
 
-bool VulkanDriver::QueryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId, Platform::FrameTimestamps* outFrameTimestamps) {
+bool VulkanDriver::QueryFrameTimestamps(SwapChainHandle swapChain, uint64_t frameId,
+                                        Platform::FrameTimestamps* outFrameTimestamps) {
     // 同步调用：句柄为空或不是本驱动创建的交换链都直接失败
     if (!swapChain) {
         return false;
@@ -1691,11 +1787,11 @@ bool VulkanDriver::QueryCompositorTiming(SwapChainHandle swapChain, Platform::Co
 
 // ---------------------------------------------------------------- 调试、捕获与空桩
 
-void VulkanDriver::InsertEventMarker(const char* string) { m_commands.InsertEventMarker(string); }
+void VulkanDriver::InsertEventMarker(const char* string) { m_commands->InsertEventMarker(string); }
 
-void VulkanDriver::PushGroupMarker(const char* string) { m_commands.PushGroupMarker(string); }
+void VulkanDriver::PushGroupMarker(const char* string) { m_commands->PushGroupMarker(string); }
 
-void VulkanDriver::PopGroupMarker(int) { m_commands.PopGroupMarker(); }
+void VulkanDriver::PopGroupMarker(int) { m_commands->PopGroupMarker(); }
 
 void VulkanDriver::StartCapture(int) {}
 
@@ -1725,8 +1821,8 @@ Handle<HwStream> VulkanDriver::CreateStreamAcquired(NS_UTILS::ImmutableString ta
     return {};
 }
 
-void VulkanDriver::SetAcquiredImage(StreamHandle stream, void* image, const ::math::mat3f& transform, CallbackHandler* handler, StreamCallback cb,
-                                    void* userData) {
+void VulkanDriver::SetAcquiredImage(StreamHandle stream, void* image, const ::math::mat3f& transform,
+                                    CallbackHandler* handler, StreamCallback cb, void* userData) {
     LOG_WARN("SetAcquiredImage 未实现：视频流路径已按设计砍掉");
 }
 
@@ -1745,28 +1841,31 @@ void VulkanDriver::DestroyStream(StreamHandle sh) {
     LOG_WARN("DestroyStream 未实现：视频流路径已按设计砍掉");
 }
 
-void VulkanDriver::SetExternalStream(TextureHandle th, StreamHandle sh) { LOG_WARN("SetExternalStream 未实现：视频流路径已按设计砍掉"); }
+void VulkanDriver::SetExternalStream(TextureHandle th, StreamHandle sh) {
+    LOG_WARN("SetExternalStream 未实现：视频流路径已按设计砍掉");
+}
 
 // ---------------------------------------------------------------- 读回与 blit
 
-void VulkanDriver::ReadPixels(RenderTargetHandle src, uint32_t x, uint32_t y, uint32_t width, uint32_t height, PixelBufferDescriptor&& pbd) {
+void VulkanDriver::ReadPixels(RenderTargetHandle src, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
+                              PixelBufferDescriptor&& pbd) {
     auto srcTarget = m_resMgr->Acquire<VulkanRenderTarget>(src);
     endCommandRecording();
-    m_readPixels.Run(
+    m_readPixels->Run(
         srcTarget, x, y, width, height, mPlatform->GetGraphicsQueueFamilyIndex(), std::move(pbd),
         [&context = m_context](uint32_t types, VkFlags reqs) { return context->SelectMemoryType(types, reqs); },
         [this](PixelBufferDescriptor&& data) { deferDestroy(std::move(data)); });
 }
 
-void VulkanDriver::ReadTexture(TextureHandle src, uint8_t level, uint16_t layer, uint32_t x, uint32_t y, uint32_t width, uint32_t height,
-                               PixelBufferDescriptor&& pbd) {
+void VulkanDriver::ReadTexture(TextureHandle src, uint8_t level, uint16_t layer, uint32_t x, uint32_t y, uint32_t width,
+                               uint32_t height, PixelBufferDescriptor&& pbd) {
     auto srcTexture = m_resMgr->Acquire<VulkanTexture>(src);
 
     // pbd 不支持 3D 纹理，故此处直接拒绝
     LOG_ASSERT(srcTexture->target != SamplerType::SAMPLER_3D);
 
     endCommandRecording();
-    m_readPixels.Run(
+    m_readPixels->Run(
         srcTexture, level, layer, x, y, width, height, mPlatform->GetGraphicsQueueFamilyIndex(), std::move(pbd),
         [&context = m_context](uint32_t types, VkFlags reqs) { return context->SelectMemoryType(types, reqs); },
         [this](PixelBufferDescriptor&& data) { deferDestroy(std::move(data)); });
@@ -1777,7 +1876,8 @@ void VulkanDriver::ReadBufferSubData(BufferObjectHandle src, uint32_t offset, ui
     deferDestroy(std::move(data));
 }
 
-void VulkanDriver::Resolve(TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer, TextureHandle src, uint8_t srcLevel, uint8_t srcLayer) {
+void VulkanDriver::Resolve(TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer, TextureHandle src, uint8_t srcLevel,
+                           uint8_t srcLayer) {
     LOG_ASSERT(!mCurrentRenderPass.renderPass && "Resolve() cannot be invoked inside a render pass.");
 
     auto srcTexture = m_resMgr->Acquire<VulkanTexture>(src);
@@ -1793,12 +1893,13 @@ void VulkanDriver::Resolve(TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer
     LOG_ASSERT(HasAnyFlag(dstTexture->usage, TextureUsage::BLIT_DST));
     LOG_ASSERT(HasAnyFlag(srcTexture->usage, TextureUsage::BLIT_SRC));
 
-    m_blitter.Resolve({ .texture = dstTexture, .level = dstLevel, .layer = dstLayer },
+    m_blitter->Resolve({ .texture = dstTexture, .level = dstLevel, .layer = dstLayer },
                       { .texture = srcTexture, .level = srcLevel, .layer = srcLayer });
 }
 
-void VulkanDriver::Blit(TextureHandle dst, uint8_t srcLevel, uint8_t srcLayer, ::math::uint2 dstOrigin, TextureHandle src, uint8_t dstLevel,
-                        uint8_t dstLayer, ::math::uint2 srcOrigin, ::math::uint2 size) {
+void VulkanDriver::Blit(TextureHandle dst, uint8_t srcLevel, uint8_t srcLayer, ::math::uint2 dstOrigin,
+                        TextureHandle src, uint8_t dstLevel, uint8_t dstLayer, ::math::uint2 srcOrigin,
+                        ::math::uint2 size) {
     LOG_ASSERT(!mCurrentRenderPass.renderPass && "Blit() cannot be invoked inside a render pass.");
 
     auto srcTexture = m_resMgr->Acquire<VulkanTexture>(src);
@@ -1821,12 +1922,12 @@ void VulkanDriver::Blit(TextureHandle dst, uint8_t srcLevel, uint8_t srcLayer, :
     VkOffset3D const dstOffsets[2] = { { dstLeft, dstTop, 0 }, { dstRight, dstBottom, 1 } };
 
     // 不保证缩放
-    m_blitter.Blit(VK_FILTER_NEAREST, { .texture = dstTexture, .level = dstLevel, .layer = dstLayer }, dstOffsets,
+    m_blitter->Blit(VK_FILTER_NEAREST, { .texture = dstTexture, .level = dstLevel, .layer = dstLayer }, dstOffsets,
                    { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);
 }
 
-void VulkanDriver::BlitDEPRECATED(TargetBufferFlags buffers, RenderTargetHandle dst, Viewport dstRect, RenderTargetHandle src, Viewport srcRect,
-                                  SamplerMagFilter filter) {
+void VulkanDriver::BlitDEPRECATED(TargetBufferFlags buffers, RenderTargetHandle dst, Viewport dstRect,
+                                  RenderTargetHandle src, Viewport srcRect, SamplerMagFilter filter) {
     LOG_ASSERT(!mCurrentRenderPass.renderPass && "BlitDEPRECATED() cannot be invoked inside a render pass.");
     LOG_ASSERT(buffers == TargetBufferFlags::COLOR0 && "blitDEPRECATED only supports COLOR0");
     LOG_ASSERT(srcRect.left >= 0 && srcRect.bottom >= 0 && dstRect.left >= 0 && dstRect.bottom >= 0 &&
@@ -1861,9 +1962,9 @@ void VulkanDriver::BlitDEPRECATED(TargetBufferFlags buffers, RenderTargetHandle 
     auto const& srcAttachment = srcTarget->GetColor(0);
 
     if (srcAttachment.texture->samples > 1) {
-        m_blitter.Resolve(dstAttachment, srcAttachment);
+        m_blitter->Resolve(dstAttachment, srcAttachment);
     } else {
-        m_blitter.Blit(vkfilter, dstAttachment, dstOffsets, srcAttachment, srcOffsets);
+        m_blitter->Blit(vkfilter, dstAttachment, dstOffsets, srcAttachment, srcOffsets);
     }
 }
 
