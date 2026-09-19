@@ -26,8 +26,7 @@ ResourceManager::ResourceManager(size_t arenaSize, bool disableUseAfterFreeCheck
     : m_handleAllocator("Handles", arenaSize, disableUseAfterFreeCheck, disablePoolHandleTags) {}
 
 void ResourceManager::Gc() noexcept {
-    // 先排空线程安全队列：其对象可能被普通队列对象的析构路径引用
-    GcList threadSafeList;
+    GcList threadSafeList;  // 先排空线程安全队列：其对象可能被普通队列对象的析构路径引用
     {
         std::lock_guard<std::mutex> lock(m_threadSafeGcListMutex);
         threadSafeList.swap(m_threadSafeGcList);

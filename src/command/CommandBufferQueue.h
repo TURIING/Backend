@@ -71,8 +71,7 @@ private:
     uint32_t m_exitRequested                             UTILS_GUARDED_BY(m_lock) = 0;
     bool m_paused                                        UTILS_GUARDED_BY(m_lock) = false;
 
-    // RequestExit() 写入的哨兵值
-    static constexpr uint32_t kExitRequested = 0x31415926;
+    static constexpr uint32_t kExitRequested = 0x31415926;  // RequestExit() 写入的哨兵值
 };
 
 DECLARE_SHARE_PTR_CLASS(CommandBufferQueue);

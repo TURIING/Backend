@@ -31,8 +31,7 @@ struct VulkanSwapChain;
 DECLARE_SHARE_PTR_CLASS(VulkanSwapChain);
 
 struct VulkanVertexBufferInfo : public HwVertexBufferInfo, public Resource {
-    // 每位对应一个顶点属性下标，宽度须覆盖全部属性
-    using AttributeBitSet = std::bitset<MAX_VERTEX_ATTRIBUTE_COUNT>;
+    using AttributeBitSet = std::bitset<MAX_VERTEX_ATTRIBUTE_COUNT>;  // 每位对应一个顶点属性下标，宽度须覆盖全部属性
 
     VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attributeCount, AttributeArray const& attributes);
 
@@ -235,11 +234,9 @@ private:
         return static_cast<uint8_t>(Bitmask(val).Count());
     }
 
-    // 不带不可变采样器的布局
-    VkDescriptorSetLayout const m_vkLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout const m_vkLayout = VK_NULL_HANDLE;           // 不带不可变采样器的布局
 
-    // 带不可变采样器的布局，可被外部图像路径改写
-    VkDescriptorSetLayout m_externalSamplerVkLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout m_externalSamplerVkLayout = VK_NULL_HANDLE;  // 带不可变采样器的布局，可被外部图像路径改写
 };
 DECLARE_SHARE_PTR_CLASS(VulkanDescriptorSetLayout);
 

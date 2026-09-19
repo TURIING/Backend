@@ -153,8 +153,7 @@ private:
     VkDevice      m_device;
     VkFramebuffer m_framebuffer;
 
-    // 缓存键里存的是由渲染目标纹理派生的图像视图，故必须让其纹理存活到本对象析构
-    VulkanRenderTargetPtr m_renderTarget;
+    VulkanRenderTargetPtr m_renderTarget;  // 缓存键里存的是由渲染目标纹理派生的图像视图，故必须让其纹理存活到本对象析构
 };
 
 DECLARE_SHARE_PTR_CLASS(VulkanFboCache);

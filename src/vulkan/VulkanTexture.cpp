@@ -543,8 +543,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     commands.Acquire(stage);
     commands.Acquire(VulkanTexturePtr(this));
 
-    // blit 形式的格式转换不支持 3D 图像与 cubemap，只处理第 0 层
-    constexpr uint32_t kLayer = 0;
+    constexpr uint32_t kLayer = 0;  // blit 形式的格式转换不支持 3D 图像与 cubemap，只处理第 0 层
 
     VkOffset3D const         rect[2]{ { 0, 0, 0 }, { int32_t(width), int32_t(height), 1 } };
     VkImageAspectFlags const aspect = GetImageAspect();

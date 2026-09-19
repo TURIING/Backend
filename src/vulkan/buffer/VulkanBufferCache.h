@@ -46,8 +46,7 @@ private:
     ResourceManagerPtr m_resourceManager;
     VmaAllocator       m_allocator;
 
-    // 4 种非 Unknown binding 各占一个池
-    static constexpr int kMaxPoolCount = 4;
+    static constexpr int kMaxPoolCount = 4;  // 4 种非 Unknown binding 各占一个池
     BufferPool           m_gpuBufferPools[kMaxPoolCount];
 
     uint64_t m_currentFrame = 0;

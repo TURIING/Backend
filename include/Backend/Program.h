@@ -149,14 +149,12 @@ private:
     std::array<std::vector<PushConstant>, SHADER_TYPE_COUNT> mPushConstants;
     DescriptorSetInfo       mDescriptorBindings;
 
-    // 本 Program 可能用到的 descriptor set 布局，便于提前编译管线
-    DescriptorSetLayoutArray mDescriptorLayouts;
+    DescriptorSetLayoutArray mDescriptorLayouts;  // 本 Program 可能用到的 descriptor set 布局，便于提前编译管线
 
     AttributesInfo      mAttributes;
     BindingUniformsInfo mBindingUniformsInfo;
 
-    //! 引擎是否以 multiview 立体初始化且本变体含 STE 标记
-    bool mMultiview = false;
+    bool mMultiview = false;  // ! 引擎是否以 multiview 立体初始化且本变体含 STE 标记
 };
 
 END_NS_BACKEND

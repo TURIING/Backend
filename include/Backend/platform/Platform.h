@@ -14,8 +14,7 @@ BEGIN_NS_BACKEND
 // 只取 DriverPtr 别名，避免 Platform.h 反向包含 Driver.h 形成循环
 DECLARE_CLASS_AND_SHARE_PTR(Driver);
 
-// 命令缓冲层维护的围栏状态；此处仅前置声明，公共头不依赖 src/
-struct VulkanCmdFence;
+struct VulkanCmdFence;  // 命令缓冲层维护的围栏状态；此处仅前置声明，公共头不依赖 src/
 
 /**
  * @brief 平台抽象基类：创建设备，并暴露交换链、同步句柄与呈现时序查询
@@ -125,8 +124,7 @@ public:
         // FeatureFlagManager 尚未移植，先以 void const* 占位，变更 7 建立该类型后改强类型
         void const *featureFlagManager = nullptr;
 
-        // 句柄 arena 大小；0 表示由驱动按有效区间取默认值
-        size_t handleArenaSize = 0;
+        size_t handleArenaSize = 0;  // 句柄 arena 大小；0 表示由驱动按有效区间取默认值
 
         size_t metalUploadBufferSizeBytes = 512 * 1024;
 
@@ -138,8 +136,7 @@ public:
 
         StereoscopicType stereoscopicType = StereoscopicType::None;
 
-        // 启用立体渲染时渲染的眼睛数，取值 1 到 Engine::GetMaxStereoscopicEyes()
-        uint8_t stereoscopicEyeCount = 2;
+        uint8_t stereoscopicEyeCount = 2;  // 启用立体渲染时渲染的眼睛数，取值 1 到 Engine::GetMaxStereoscopicEyes()
 
         bool               assertNativeWindowIsValid          = false;
         bool               metalDisablePanicOnDrawableFailure = false;

@@ -81,8 +81,7 @@ private:
     // 本类接管 surface 的所有权
     VkSurfaceKHR     m_surface;
     VkSwapchainKHR   m_swapchain = VK_NULL_HANDLE;
-    // surface capabilities 未定义 currentExtent 时使用
-    VkExtent2D const m_fallbackExtent;
+    VkExtent2D const m_fallbackExtent;  // surface capabilities 未定义 currentExtent 时使用
     VkSemaphore      m_imageReady[kImageReadySemaphoreCount];
     uint32_t         m_currentImageReadyIndex = 0;
 
@@ -93,8 +92,7 @@ private:
 };
 
 struct VulkanPlatformHeadlessSwapChain : public VulkanPlatformSwapChainBase {
-    // 无 surface 时的双缓冲下限
-    static constexpr uint32_t kHeadlessSwapChainSize = 2;
+    static constexpr uint32_t kHeadlessSwapChainSize = 2;  // 无 surface 时的双缓冲下限
 
     VulkanPlatformHeadlessSwapChain(VulkanContext const &context, VkDevice device, VkQueue queue, VkExtent2D extent, uint64_t flags);
 

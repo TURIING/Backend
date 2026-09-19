@@ -21,11 +21,9 @@ struct TargetBufferInfo {
 
     TargetBufferInfo() noexcept = default;
 
-    //! 作为渲染目标使用的纹理
-    Handle<HwTexture> handle;
+    Handle<HwTexture> handle;  // ! 作为渲染目标使用的纹理
 
-    //! mipmap 层级
-    uint8_t level = 0;
+    uint8_t level = 0;         // ! mipmap 层级
 
     //! cubemap 时为面（面到层的映射见 TextureCubemapFace）；2D 数组 / cubemap 数组 / 3D
     //! 纹理时为单层索引；multiview 纹理（layerCount > 1）时为当前 2D 数组纹理的起始层

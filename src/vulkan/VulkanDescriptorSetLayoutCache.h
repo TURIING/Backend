@@ -42,10 +42,8 @@ public:
 
 private:
     struct LayoutKey {
-        // 用位掩码而非绑定的具体字段描述布局
-        VulkanDescriptorSetLayout::Bitmask bitmask = {};
-        // 不可变采样器个数不定，整体哈希成 64 位参与比较
-        uint64_t immutableSamplerHash = 0;
+        VulkanDescriptorSetLayout::Bitmask bitmask = {};  // 用位掩码而非绑定的具体字段描述布局
+        uint64_t immutableSamplerHash = 0;                // 不可变采样器个数不定，整体哈希成 64 位参与比较
     };
     static_assert(sizeof(LayoutKey) == 48);
 

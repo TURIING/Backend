@@ -14,8 +14,7 @@ BEGIN_NS_BACKEND
 
 namespace {
 
-// 空槽积累到这个数量才压缩描述符集数组，避免每次绑定都搬运
-constexpr size_t kDescriptorSetGcLimit = 10;
+constexpr size_t kDescriptorSetGcLimit = 10;  // 空槽积累到这个数量才压缩描述符集数组，避免每次绑定都搬运
 
 template <typename Bitmask>
 void FromStageFlags(ShaderStageFlags stage, descriptor_binding_t binding, Bitmask& mask) {
@@ -337,8 +336,7 @@ VulkanRenderTarget::VulkanRenderTarget(VkDevice device, VkPhysicalDevice physica
         if (samples > 1) {
             m_info->msaaDepthStencilIndex = m_info->depthStencilIndex;
             if (depthStencilTexture->samples == 1) {
-                // MSAA 深度纹理的 mip 层级必须为 1
-                uint8_t const msLevel = 1;
+                uint8_t const msLevel = 1;  // MSAA 深度纹理的 mip 层级必须为 1
                 // 源深度纹理不可直接作 MSAA 附件，须另建侧车
                 auto msaaTexture = InitMsaaTexture(depthStencilTexture, device, physicalDevice, context, allocator, commands, resourceManager,
                                                    msLevel, samples, stagePool);

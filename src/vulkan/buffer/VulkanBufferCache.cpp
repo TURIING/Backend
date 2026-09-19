@@ -53,8 +53,7 @@ VulkanBufferPtr VulkanBufferCache::Acquire(VulkanBufferBinding binding, uint32_t
 }
 
 void VulkanBufferCache::Gc() noexcept {
-    // 前几帧提前返回，避免无符号帧计数回绕
-    constexpr uint32_t kTimeBeforeEviction = 3;
+    constexpr uint32_t kTimeBeforeEviction = 3;  // 前几帧提前返回，避免无符号帧计数回绕
     if (++m_currentFrame <= kTimeBeforeEviction) {
         return;
     }

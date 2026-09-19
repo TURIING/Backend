@@ -152,13 +152,10 @@ private:
     DescriptorCount const m_count;
     uint16_t const    m_capacity;
 
-    // 已分配的集合总数
-    uint16_t m_size;
-    // 空闲集合数
-    uint16_t m_unusedCount;
+    uint16_t m_size;         // 已分配的集合总数
+    uint16_t m_unusedCount;  // 空闲集合数
 
-    // 布局 → 该布局下已分配但空闲的集合列表
-    UnusedSetMap m_unused;
+    UnusedSetMap m_unused;   // 布局 → 该布局下已分配但空闲的集合列表
 };
 
 }  // namespace

@@ -46,14 +46,11 @@ public:
 
         bool isSRGBSwapChainSupported = true;
 
-        // 窗口尺寸变化时先 flush 并等待命令队列，再重建交换链
-        bool flushAndWaitOnWindowResize = true;
+        bool flushAndWaitOnWindowResize = true;                // 窗口尺寸变化时先 flush 并等待命令队列，再重建交换链
 
-        // 交换链图像是否转换到适合呈现的布局
-        bool transitionSwapChainImageLayoutForPresent = true;
+        bool transitionSwapChainImageLayoutForPresent = true;  // 交换链图像是否转换到适合呈现的布局
 
-        // 未使用的 framebuffer 在多少帧后被逐出缓存
-        uint32_t timeBeforeEvictionFbo = 3;
+        uint32_t timeBeforeEvictionFbo = 3;                    // 未使用的 framebuffer 在多少帧后被逐出缓存
 
         // 并行预编译管线缓存时，按这些外部格式预热带不可变采样器的布局
         std::vector<ExternalYcbcrFormat> pipelineCachePrewarmExternalFormats;

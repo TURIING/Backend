@@ -12,8 +12,7 @@
 BEGIN_NS_BACKEND
 
 namespace {
-// 每个计时器占一对查询：起、止
-constexpr uint32_t kQueriesPerTimer = 2;
+constexpr uint32_t kQueriesPerTimer = 2;  // 每个计时器占一对查询：起、止
 }  // namespace
 
 VulkanQueryManager::VulkanQueryManager(VkDevice device) : m_device(device) {
@@ -28,8 +27,7 @@ VulkanQueryManager::VulkanQueryManager(VkDevice device) : m_device(device) {
 }
 
 VulkanTimerQueryPtr VulkanQueryManager::GetNextQuery(const ResourceManagerPtr& resourceManager) {
-    // 取空闲位与置位必须在同一临界区：否则并发取用时可能拿到同一个下标
-    size_t firstUnused = 0;
+    size_t firstUnused = 0;  // 取空闲位与置位必须在同一临界区：否则并发取用时可能拿到同一个下标
     {
         std::lock_guard const lock(m_mutex);
         auto const            unused = ~m_used;

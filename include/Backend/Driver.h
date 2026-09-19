@@ -19,8 +19,7 @@ BEGIN_NS_BACKEND
 class CommandStream;
 class Dispatcher;
 
-// 命令流别名：驱动接口签名的书写形式（与上游 DriverApiForward.h 一致）
-using DriverApi = CommandStream;
+using DriverApi = CommandStream;  // 命令流别名：驱动接口签名的书写形式（与上游 DriverApiForward.h 一致）
 
 // 异步方法非虚、经命令流排队，同步方法纯虚、直接调用，避免记录端虚调用
 class Driver : public NS_UTILS::Ref {

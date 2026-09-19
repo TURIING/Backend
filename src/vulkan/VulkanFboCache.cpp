@@ -12,8 +12,7 @@ BEGIN_NS_BACKEND
 
 namespace {
 
-// VkRenderPass / VkFramebuffer 闲置超过该帧数即从缓存逐出
-constexpr uint32_t kTimeBeforeEviction = kMaxCommandBuffers;
+constexpr uint32_t kTimeBeforeEviction = kMaxCommandBuffers;  // VkRenderPass / VkFramebuffer 闲置超过该帧数即从缓存逐出
 
 }  // namespace
 

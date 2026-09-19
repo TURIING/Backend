@@ -118,8 +118,7 @@ void VulkanSwapChain::Present() {
 }
 
 std::pair<bool, bool> VulkanSwapChain::Acquire() {
-    // 底层交换链是否已更换；更换意味着缓存里的图像视图全部失效
-    bool swapchainRecreated = false;
+    bool swapchainRecreated = false;  // 底层交换链是否已更换；更换意味着缓存里的图像视图全部失效
 
     VkResult result = VK_NOT_READY;
 

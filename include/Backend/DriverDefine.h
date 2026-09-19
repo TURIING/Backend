@@ -261,11 +261,9 @@ enum class DescriptorType : uint8_t {
 enum class DescriptorFlags : uint8_t {
     NONE = 0x00,
 
-    // UNIFORM_BUFFER 使用动态偏移
-    DYNAMIC_OFFSET = 0x01,
+    DYNAMIC_OFFSET = 0x01,  // UNIFORM_BUFFER 使用动态偏移
 
-    // 纹理/采样器不做过滤
-    UNFILTERABLE = 0x02,
+    UNFILTERABLE = 0x02,    // 纹理/采样器不做过滤
 };
 
 constexpr DescriptorFlags operator|(DescriptorFlags lhs, DescriptorFlags rhs) noexcept {
@@ -574,8 +572,7 @@ enum class CompressedPixelDataType : uint16_t {
     DXT1_RGB, DXT1_RGBA, DXT3_RGBA, DXT5_RGBA,
     DXT1_SRGB, DXT1_SRGBA, DXT3_SRGBA, DXT5_SRGBA,
 
-    // ASTC 需 GLES 扩展
-    RGBA_ASTC_4x4,
+    RGBA_ASTC_4x4,  // ASTC 需 GLES 扩展
     RGBA_ASTC_5x4,
     RGBA_ASTC_5x5,
     RGBA_ASTC_6x5,
@@ -1161,22 +1158,15 @@ static_assert(sizeof(StencilState) == 12u, "StencilState size not what was inten
  * 驱动侧针对性绕过：每项都对应一个已确认的驱动/编译器缺陷
  */
 enum class Workaround : uint16_t {
-    // EASU 通道必须拆分，否则着色器编译器会把提前返回的分支抹平
-    SplitEasu,
-    // 允许与辅助缓冲（深度/模板）构成反馈环，只要整个渲染通道内它们是只读的
-    AllowReadOnlyAncillaryFeedbackLoop,
-    // Adreno 上某些 uniform 数组必须做初始化，否则崩溃
-    AdrenoUniformArrayCrash,
+    SplitEasu,                               // EASU 通道必须拆分，否则着色器编译器会把提前返回的分支抹平
+    AllowReadOnlyAncillaryFeedbackLoop,      // 允许与辅助缓冲（深度/模板）构成反馈环，只要整个渲染通道内它们是只读的
+    AdrenoUniformArrayCrash,                 // Adreno 上某些 uniform 数组必须做初始化，否则崩溃
     // 绕过 Metal 流水线编译错误 "Could not statically determine the target of a texture"
     MetalStaticTextureTargetError,
-    // Adreno 驱动有时无法 blit 到纹理数组的某一层
-    DisableBlitIntoTextureArray,
-    // PowerVR GPU 需要的一组绕过
-    PowerVrShaderWorkarounds,
-    // Firefox on Mac 编译默认材质的程序过慢导致启动卡顿，故不预编译其深度变体
-    DisableDepthPrecacheForDefaultMaterial,
-    // 在着色器里模拟 sRGB 交换链
-    EmulateSrgbSwapchain,
+    DisableBlitIntoTextureArray,             // Adreno 驱动有时无法 blit 到纹理数组的某一层
+    PowerVrShaderWorkarounds,                // PowerVR GPU 需要的一组绕过
+    DisableDepthPrecacheForDefaultMaterial,  // Firefox on Mac 编译默认材质的程序过慢导致启动卡顿，故不预编译其深度变体
+    EmulateSrgbSwapchain,                    // 在着色器里模拟 sRGB 交换链
 };
 
 using AsyncCallId = uint32_t;

@@ -340,8 +340,7 @@ VkResult VulkanPlatformHeadlessSwapChain::Acquire(VulkanPlatform::ImageSyncData 
 }
 
 VkResult VulkanPlatformHeadlessSwapChain::Present(uint32_t index, VkSemaphore finished) {
-    // headless 无呈现目标
-    return VK_SUCCESS;
+    return VK_SUCCESS;  // headless 无呈现目标
 }
 
 VkResult VulkanPlatformHeadlessSwapChain::Recreate() {

@@ -56,8 +56,7 @@ enum class ResourceType : uint8_t {
     Stream              = 20,
     Framebuffer         = 21,
     RenderPass          = 22,
-    // 末位哨兵，枚举迭代依赖
-    UndefinedType = 23,
+    UndefinedType = 23,  // 末位哨兵，枚举迭代依赖
 };
 
 std::string_view TransResourceTypeToStr(ResourceType type);

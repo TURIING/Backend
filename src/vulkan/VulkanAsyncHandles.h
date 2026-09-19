@@ -77,8 +77,7 @@ struct VulkanProgram : public HwProgram, public Resource {
         return m_info->pushConstantDescription.GetVkRanges();
     }
 
-    // 前端到后端的着色器顺序是顶点、片元、计算，本项目只创建前两个
-    static constexpr uint8_t kMaxShaderModules = 2;
+    static constexpr uint8_t kMaxShaderModules = 2;  // 前端到后端的着色器顺序是顶点、片元、计算，本项目只创建前两个
 
 private:
     struct PipelineInfo {

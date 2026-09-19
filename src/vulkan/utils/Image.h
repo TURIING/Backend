@@ -2,13 +2,13 @@
 
 #include "Backend/DriverDefine.h"
 #include "Backend/Namespace.h"
+
 #include "Utils/Debug.h"
 #include "Utils/Log.h"
 #include "Utils/Macro.h"
 
-#include <volk.h>
-
 #include <cstdint>
+#include <volk.h>
 
 BEGIN_NS_BACKEND
 
@@ -16,38 +16,26 @@ namespace VK_UTILS {
 
 // 图像在命令流中的布局状态；被 VulkanTexture 用于布局跟踪、被 VulkanFboCache 用于渲染通道
 enum class VulkanLayout : uint8_t {
-    // VkImage 刚创建、尚未发生任何转换时的状态
-    UNDEFINED,
-    // 片元/顶点着色器均可读写
-    STAGING,
-    // 仅片元着色器可读
-    FRAG_READ,
-    // 仅顶点着色器可读
-    VERT_READ,
-    // 作为拷贝操作的源
-    TRANSFER_SRC,
-    // 作为拷贝操作的目标
-    TRANSFER_DST,
-    // 作为深度/模板附件
-    DEPTH_STENCIL_ATTACHMENT,
-    // 既作深度附件又作采样源
-    DEPTH_SAMPLER,
-    // 交换链图像，将被呈现
-    PRESENT,
-    // 颜色附件，同时也可被采样
-    COLOR_ATTACHMENT,
-    // 颜色附件的 MSAA 解析目标
-    COLOR_ATTACHMENT_RESOLVE,
+    UNDEFINED,                 // VkImage 刚创建、尚未发生任何转换时的状态
+    STAGING,                   // 片元/顶点着色器均可读写
+    FRAG_READ,                 // 仅片元着色器可读
+    VERT_READ,                 // 仅顶点着色器可读
+    TRANSFER_SRC,              // 作为拷贝操作的源
+    TRANSFER_DST,              // 作为拷贝操作的目标
+    DEPTH_STENCIL_ATTACHMENT,  // 作为深度/模板附件
+    DEPTH_SAMPLER,             // 既作深度附件又作采样源
+    PRESENT,                   // 交换链图像，将被呈现
+    COLOR_ATTACHMENT,          // 颜色附件，同时也可被采样
+    COLOR_ATTACHMENT_RESOLVE,  // 颜色附件的 MSAA 解析目标
 };
 
 struct VulkanLayoutTransition {
-    VkImage                image;
-    VulkanLayout           oldLayout;
-    VulkanLayout           newLayout;
+    VkImage                 image;
+    VulkanLayout            oldLayout;
+    VulkanLayout            newLayout;
     VkImageSubresourceRange subresources;
 };
 
-// 供日志与断言输出布局名，未列出的取值返回 UNKNOWN LAYOUT
 NODISCARD inline const char *VkLayoutString(VulkanLayout layout) {
     switch (layout) {
         CASE_FROM_TO(VulkanLayout::UNDEFINED, "UNDEFINED");

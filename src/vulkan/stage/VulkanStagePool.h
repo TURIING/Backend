@@ -68,8 +68,7 @@ private:
 
     uint64_t m_lastAccessed;
 
-    // 淘汰时需更新 m_lastAccessed
-    friend class VulkanStagePool;
+    friend class VulkanStagePool;  // 淘汰时需更新 m_lastAccessed
 };
 
 template <>
@@ -108,14 +107,12 @@ private:
     VulkanContextPtr   m_context;
     ResourceManagerPtr m_resourceManager;
     VmaAllocator       m_allocator;
-    // 驱动在当前变更尚未持有 VulkanCommands（属变更 7 接线），为空时跳过图像布局转换
-    VulkanCommandsPtr m_commands;
+    VulkanCommandsPtr m_commands;                        // 驱动在当前变更尚未持有 VulkanCommands（属变更 7 接线），为空时跳过图像布局转换
 
     // 剩余可切分空间 → 缓冲，lower_bound(numBytes) 命中容量足够的候选
     std::multimap<uint32_t, VulkanStageBufferPtr> m_stages;
 
-    // 空闲图像；归还只在此登记，淘汰按 lastAccessed 的 LRU 判定
-    std::unordered_set<VulkanStageImage*> m_freeImages;
+    std::unordered_set<VulkanStageImage*> m_freeImages;  // 空闲图像；归还只在此登记，淘汰按 lastAccessed 的 LRU 判定
 
     uint64_t m_currentFrame = 0;
 };

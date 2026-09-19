@@ -349,8 +349,7 @@ static_assert(kExtVkFormatCount == 6, "EXT_VK_FORMATS 项数与上游不一致")
 
 using UniformBufferBitmask   = NS_UTILS::Bitset64;
 using SamplerBitmask         = NS_UTILS::Bitset64;
-// 目前至多一个 input attachment，该掩码只为让相关代码保持统一形态
-using InputAttachmentBitmask = NS_UTILS::Bitset64;
+using InputAttachmentBitmask = NS_UTILS::Bitset64;  // 目前至多一个 input attachment，该掩码只为让相关代码保持统一形态
 
 constexpr uint8_t kMaxDescriptorSetBitmaskBits =
         std::max(std::max(sizeof(UniformBufferBitmask), sizeof(SamplerBitmask)),
@@ -367,8 +366,7 @@ constexpr uint8_t GetFragmentStageShift() noexcept {
     return sizeof(Bitmask) * 4;
 }
 
-// 至多 4 个描述符集，该掩码标记其中哪些处于激活状态
-using DescriptorSetMask = NS_UTILS::Bitset8;
+using DescriptorSetMask = NS_UTILS::Bitset8;  // 至多 4 个描述符集，该掩码标记其中哪些处于激活状态
 
 // 以下取值直接沿用 Vulkan 规范对 YUV→RGB 转换的定义
 enum class SamplerYcbcrModelConversion : uint8_t {

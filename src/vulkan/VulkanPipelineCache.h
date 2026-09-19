@@ -172,14 +172,10 @@ private:
 
     // 创建管线时可选启用的动态状态（视驱动能力而定）
     struct PipelineDynamicOptions {
-        // 需要 VK_EXT_vertex_input_dynamic_state
-        bool useDynamicVertexInputState = false;
-        // 需要 VK_KHR_dynamic_rendering
-        bool useDynamicRenderPasses = false;
-        // 仅在 useDynamicRenderPasses 为 true 时有效
-        StereoscopicType stereoscopicType = StereoscopicType::None;
-        // 仅在 stereoscopicType 为 Multiview 时有效
-        uint8_t stereoscopicViewCount = 2;
+        bool useDynamicVertexInputState = false;                     // 需要 VK_EXT_vertex_input_dynamic_state
+        bool useDynamicRenderPasses = false;                         // 需要 VK_KHR_dynamic_rendering
+        StereoscopicType stereoscopicType = StereoscopicType::None;  // 仅在 useDynamicRenderPasses 为 true 时有效
+        uint8_t stereoscopicViewCount = 2;                           // 仅在 stereoscopicType 为 Multiview 时有效
     };
 
     static_assert(sizeof(PipelineKey) == 320, "PipelineKey must not have implicit padding.");
@@ -206,23 +202,18 @@ private:
 
     PipelineMap m_pipelines;
 
-    // 不变状态
-    VkDevice m_device = VK_NULL_HANDLE;
+    VkDevice m_device = VK_NULL_HANDLE;       // 不变状态
 
     // 驱动的管线缓存句柄。条目被 Gc 逐出后重建同一条管线时，它能让驱动复用已编译结果
     VkPipelineCache m_pipelineCache = VK_NULL_HANDLE;
 
-    // 当前管线、布局与描述符集的需求状态
-    PipelineKey m_pipelineRequirements = {};
+    PipelineKey m_pipelineRequirements = {};  // 当前管线、布局与描述符集的需求状态
 
-    // 当前已绑定的管线与描述符集状态
-    PipelineKey m_boundPipeline = {};
+    PipelineKey m_boundPipeline = {};         // 当前已绑定的管线与描述符集状态
 
-    // 允许预热管线缓存以缩短 draw 时的管线编译时间
-    CompilerThreadPool m_compilerThreadPool;
+    CompilerThreadPool m_compilerThreadPool;  // 允许预热管线缓存以缩短 draw 时的管线编译时间
 
-    // 让缓存管理器能在预编译任务全部完成后通知前端
-    CallbackManager m_callbackManager;
+    CallbackManager m_callbackManager;        // 让缓存管理器能在预编译任务全部完成后通知前端
 
     [[maybe_unused]] VulkanContext const& m_context;
 };

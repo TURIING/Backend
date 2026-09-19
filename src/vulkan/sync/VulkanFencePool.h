@@ -41,10 +41,8 @@ private:
     VkDevice const   m_device;
     uint32_t const   m_minPoolSize;
 
-    // 帧号 → 空闲围栏，帧号用于淘汰判定
-    std::deque<std::pair<uint64_t, VkFence>> m_fences;
-    // 仅弱引用跟踪，用于终止时切断回池路径
-    std::vector<std::weak_ptr<VulkanCmdFence>> m_fenceStatuses;
+    std::deque<std::pair<uint64_t, VkFence>> m_fences;           // 帧号 → 空闲围栏，帧号用于淘汰判定
+    std::vector<std::weak_ptr<VulkanCmdFence>> m_fenceStatuses;  // 仅弱引用跟踪，用于终止时切断回池路径
 
     uint32_t m_numFences = 0;
     uint64_t m_currFrame = 0;

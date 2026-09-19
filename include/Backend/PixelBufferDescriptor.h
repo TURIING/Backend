@@ -144,24 +144,18 @@ public:
         return bprAligned * height;
     }
 
-    //! 左上角 x 坐标（像素）
-    uint32_t left = 0;
+    uint32_t left = 0;  // ! 左上角 x 坐标（像素）
 
-    //! 左上角 y 坐标（像素）
-    uint32_t top = 0;
+    uint32_t top = 0;   // ! 左上角 y 坐标（像素）
 
     union {
         struct {
-            //! 一行像素的字节数
-            uint32_t stride;
-            //! 像素数据格式
-            PixelDataFormat format;
+            uint32_t stride;         // ! 一行像素的字节数
+            PixelDataFormat format;  // ! 像素数据格式
         };
         struct {
-            //! 压缩图像的压缩后字节数
-            uint32_t imageSize;
-            //! 压缩图像格式
-            Backend::CompressedPixelDataType compressedFormat;
+            uint32_t imageSize;                                 // ! 压缩图像的压缩后字节数
+            Backend::CompressedPixelDataType compressedFormat;  // ! 压缩图像格式
         };
     };
 

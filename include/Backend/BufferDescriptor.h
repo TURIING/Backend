@@ -90,11 +90,9 @@ public:
     //! 返回登记的用户指针
     NODISCARD void* GetUser() const noexcept { return mUser; }
 
-    //! CPU 内存块虚拟地址
-    void* buffer = nullptr;
+    void* buffer = nullptr;  // ! CPU 内存块虚拟地址
 
-    //! CPU 内存块字节数
-    size_t size = 0;
+    size_t size = 0;         // ! CPU 内存块字节数
 
 private:
     Callback         mCallback = nullptr;

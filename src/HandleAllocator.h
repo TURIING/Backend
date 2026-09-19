@@ -279,8 +279,7 @@ private:
 
     HandleArena mHandleArena;
 
-    // 仅当 arena 耗尽走系统堆时使用
-    mutable utils::LockingPolicy::Mutex                          mLock;
+    mutable utils::LockingPolicy::Mutex                          mLock;  // 仅当 arena 耗尽走系统堆时使用
     std::unordered_map<HandleBase::HandleId, void*> mOverflowMap UTILS_GUARDED_BY(mLock);
     std::atomic<HandleBase::HandleId>                            mId = 0;
 

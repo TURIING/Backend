@@ -28,8 +28,7 @@ namespace {
 // 句柄 arena 取上游默认值 8MB；0（未配置）会得到空 arena 并在 HandleAllocator 初始化时越界断言
 constexpr size_t kMinHandleArenaSize = 8u * 1024u * 1024u;
 
-// 被跳过的帧也会累积命令，故必须有独立于 flush() 的 GC 节奏
-constexpr uint8_t kMaxTicksBetweenGc = 3;
+constexpr uint8_t kMaxTicksBetweenGc = 3;  // 被跳过的帧也会累积命令，故必须有独立于 flush() 的 GC 节奏
 
 VmaAllocator CreateAllocator(const VulkanPlatformPtr& platform) noexcept {
     VmaVulkanFunctions const vulkanFunctions{
@@ -603,8 +602,7 @@ Handle<HwRenderPrimitive> VulkanDriver::CreateRenderPrimitiveS() noexcept {
 void VulkanDriver::CreateRenderPrimitiveR(RenderPrimitiveHandle rph, VertexBufferHandle vbh, IndexBufferHandle ibh,
                                           PrimitiveType pt, NS_UTILS::ImmutableString&& tag) {
     auto vb = m_resMgr->Acquire<VulkanVertexBuffer>(vbh);
-    // 无索引缓冲的图元合法：走 vkCmdDraw 而非 vkCmdDrawIndexed
-    VulkanIndexBufferPtr ib;
+    VulkanIndexBufferPtr ib;  // 无索引缓冲的图元合法：走 vkCmdDraw 而非 vkCmdDrawIndexed
     if (ibh) {
         ib = m_resMgr->Acquire<VulkanIndexBuffer>(ibh);
     }
@@ -731,8 +729,7 @@ void VulkanDriver::CreateRenderTargetR(RenderTargetHandle rth, TargetBufferFlags
         }
     }
 
-    // VK 的渲染目标只能有一个深度/模板附件，深度与模板合并时由 depth 提供
-    VulkanAttachment depthStencil;
+    VulkanAttachment depthStencil;  // VK 的渲染目标只能有一个深度/模板附件，深度与模板合并时由 depth 提供
     if (depth.handle || stencil.handle) {
         LOG_ASSERT(!depth.handle || !stencil.handle || (depth.handle == stencil.handle));
         TargetBufferInfo const depthStencilBuffer = depth.handle ? depth : stencil;
@@ -1184,8 +1181,7 @@ void VulkanDriver::BeginRenderPass(RenderTargetHandle rth, const RenderPassParam
 
     VkClearValue clearValues[MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT + 1] = {};
     if (clearVal != TargetBufferFlags::NONE) {
-        // clearValues 的顺序必须与 GetFramebuffer 里的附件顺序一致，且与是否真的清空无关
-        uint32_t colorIdx = 0;
+        uint32_t colorIdx = 0;  // clearValues 的顺序必须与 GetFramebuffer 里的附件顺序一致，且与是否真的清空无关
         for (int i = 0; i < MRT::MAX_SUPPORTED_RENDER_TARGET_COUNT; i++) {
             if (fbkey.color[i]) {
                 VkClearValue& clearValue = clearValues[renderPassInfo.clearValueCount++];
@@ -1658,8 +1654,7 @@ bool VulkanDriver::IsAutoDepthResolveSupported() { return false; }
 bool VulkanDriver::IsSRGBSwapChainSupported() { return mIsSRGBSwapChainSupported; }
 
 bool VulkanDriver::IsMSAASwapChainSupported(uint32_t samples) {
-    // MSAA 交换链上游同样是硬编码关闭
-    return false;
+    return false;  // MSAA 交换链上游同样是硬编码关闭
 }
 
 bool VulkanDriver::IsProtectedContentSupported() { return m_context->IsProtectedMemorySupported(); }
@@ -1806,8 +1801,7 @@ void VulkanDriver::QueueCommandAsyncR(AsyncCallId jobId, std::function<void()>&&
                                       CallbackHandler::Callback callback, void* user) {}
 
 bool VulkanDriver::CancelAsyncJob(AsyncCallId jobId) {
-    // 上游同样未实现
-    return false;
+    return false;  // 上游同样未实现
 }
 
 Handle<HwStream> VulkanDriver::CreateStreamNative(void* stream, NS_UTILS::ImmutableString tag) {

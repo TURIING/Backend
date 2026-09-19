@@ -67,8 +67,7 @@ private:
     VmaAllocator const    m_allocator;
     VkDevice const        m_device;
 
-    // sidecar 由持有它的纹理一同持有
-    VulkanTexturePtr m_sidecarMSAA;
+    VulkanTexturePtr m_sidecarMSAA;  // sidecar 由持有它的纹理一同持有
 
     VkImage const     m_textureImage;
     // 为 VK_NULL_HANDLE 表示图像由外部创建，本对象只借用不释放
@@ -180,8 +179,7 @@ private:
 
     VulkanTextureStatePtr m_state;
 
-    // 主视图范围：绑定到采样器的那个图像视图所覆盖的子资源范围
-    VkImageSubresourceRange m_primaryViewRange;
+    VkImageSubresourceRange m_primaryViewRange;  // 主视图范围：绑定到采样器的那个图像视图所覆盖的子资源范围
 
     VkComponentMapping m_swizzle{};
 };

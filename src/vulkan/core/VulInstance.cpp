@@ -117,8 +117,7 @@ VulInstancePtr VulInstance::Builder::Build() {
     }
 #endif  // BVK_ENABLED(BVK_DEBUG_VALIDATION)
 
-    // Platform 可要求 1~2 个实例扩展，加上这里的公共代码最多 8 个
-    constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;
+    constexpr uint32_t MAX_INSTANCE_EXTENSION_COUNT = 8;  // Platform 可要求 1~2 个实例扩展，加上这里的公共代码最多 8 个
     char const        *ppEnabledExtensions[MAX_INSTANCE_EXTENSION_COUNT];
     uint32_t           enabledExtensionCount = 0;
 

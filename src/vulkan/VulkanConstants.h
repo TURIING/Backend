@@ -19,7 +19,6 @@ constexpr int kMaxPipelineAge = kMaxCommandBuffers;
 
 static_assert(kMaxPipelineAge >= kMaxCommandBuffers);
 
-// 以 RenderDoc 捕获为目标时须关掉其不支持的特性，否则捕获时驱动会崩溃
-constexpr bool kRenderdocCaptureMode = false;
+constexpr bool kRenderdocCaptureMode = false;  // 以 RenderDoc 捕获为目标时须关掉其不支持的特性，否则捕获时驱动会崩溃
 
 END_NS_BACKEND
