@@ -21,9 +21,9 @@ void BlitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, VkFilter
             "Fast blit from image={} level={} layer={} layout={} src-rect=({},{},{})->({},{},{})"
             " to image={} level={} layer={} layout={} dst-rect=({},{},{})->({},{},{})",
             static_cast<void const*>(src.texture->GetImage()), static_cast<int>(src.level), static_cast<int>(src.layer),
-            static_cast<int>(src.GetLayout()), srcRect[0].x, srcRect[0].y, srcRect[0].z, srcRect[1].x, srcRect[1].y, srcRect[1].z,
+            src.GetLayout(), srcRect[0].x, srcRect[0].y, srcRect[0].z, srcRect[1].x, srcRect[1].y, srcRect[1].z,
             static_cast<void const*>(dst.texture->GetImage()), static_cast<int>(dst.level), static_cast<int>(dst.layer),
-            static_cast<int>(dst.GetLayout()), dstRect[0].x, dstRect[0].y, dstRect[0].z, dstRect[1].x, dstRect[1].y, dstRect[1].z);
+            dst.GetLayout(), dstRect[0].x, dstRect[0].y, dstRect[0].z, dstRect[1].x, dstRect[1].y, dstRect[1].z);
     }
 
     VkImageSubresourceRange const srcRange = src.GetSubresourceRange();
@@ -60,8 +60,8 @@ void ResolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, Vulka
     VkCommandBuffer const cmdBuffer = commands->Buffer();
     if constexpr (BVK_ENABLED(BVK_DEBUG_BLITTER)) {
         LOG_DEBUG("Fast resolve from image={} level={} layout={} to image={} level={} layout={}",
-                  static_cast<void const*>(src.texture->GetImage()), static_cast<int>(src.level), static_cast<int>(src.GetLayout()),
-                  static_cast<void const*>(dst.texture->GetImage()), static_cast<int>(dst.level), static_cast<int>(dst.GetLayout()));
+                  static_cast<void const*>(src.texture->GetImage()), static_cast<int>(src.level), src.GetLayout(),
+                  static_cast<void const*>(dst.texture->GetImage()), static_cast<int>(dst.level), dst.GetLayout());
     }
 
     VkImageSubresourceRange const srcRange = src.GetSubresourceRange();

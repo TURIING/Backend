@@ -665,7 +665,7 @@ bool VulkanTexture::TransitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
 #if BVK_ENABLED(BVK_DEBUG_LAYOUT_TRANSITION)
     LOG_DEBUG("transition texture={} ({},{}) count=({},{}) old={} new={} hasTransitions={} sliceBySlice={}",
               static_cast<void*>(m_state->m_textureImage), range.baseArrayLayer, range.baseMipLevel, range.layerCount,
-              range.levelCount, static_cast<int>(oldLayout), static_cast<int>(newLayout), hasTransitions, transitionSliceBySlice);
+              range.levelCount, oldLayout, newLayout, hasTransitions, transitionSliceBySlice);
 #endif
 
     return hasTransitions;

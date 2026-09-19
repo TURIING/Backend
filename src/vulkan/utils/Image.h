@@ -3,6 +3,8 @@
 #include "Backend/DriverDefine.h"
 #include "Backend/Namespace.h"
 #include "Utils/Debug.h"
+#include "Utils/Log.h"
+#include "Utils/Macro.h"
 
 #include <volk.h>
 
@@ -44,6 +46,24 @@ struct VulkanLayoutTransition {
     VulkanLayout           newLayout;
     VkImageSubresourceRange subresources;
 };
+
+// 供日志与断言输出布局名，未列出的取值返回 UNKNOWN LAYOUT
+NODISCARD inline const char *VkLayoutString(VulkanLayout layout) {
+    switch (layout) {
+        CASE_FROM_TO(VulkanLayout::UNDEFINED, "UNDEFINED");
+        CASE_FROM_TO(VulkanLayout::STAGING, "STAGING");
+        CASE_FROM_TO(VulkanLayout::FRAG_READ, "FRAG_READ");
+        CASE_FROM_TO(VulkanLayout::VERT_READ, "VERT_READ");
+        CASE_FROM_TO(VulkanLayout::TRANSFER_SRC, "TRANSFER_SRC");
+        CASE_FROM_TO(VulkanLayout::TRANSFER_DST, "TRANSFER_DST");
+        CASE_FROM_TO(VulkanLayout::DEPTH_STENCIL_ATTACHMENT, "DEPTH_STENCIL_ATTACHMENT");
+        CASE_FROM_TO(VulkanLayout::DEPTH_SAMPLER, "DEPTH_SAMPLER");
+        CASE_FROM_TO(VulkanLayout::PRESENT, "PRESENT");
+        CASE_FROM_TO(VulkanLayout::COLOR_ATTACHMENT, "COLOR_ATTACHMENT");
+        CASE_FROM_TO(VulkanLayout::COLOR_ATTACHMENT_RESOLVE, "COLOR_ATTACHMENT_RESOLVE");
+    }
+    return "UNKNOWN LAYOUT";
+}
 
 // 同一布局下的两种状态间无需屏障，故以 Vulkan 原生布局为键比较
 constexpr inline VkImageLayout GetVkLayout(VulkanLayout layout) {
@@ -93,3 +113,12 @@ uint8_t ReduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 }  // namespace VK_UTILS
 
 END_NS_BACKEND
+
+// 日志里直接写 VulkanLayout 时按枚举名输出，复用 VkLayoutString 的映射
+template <>
+struct fmt::formatter<Backend::VK_UTILS::VulkanLayout> : fmt::formatter<std::string_view> {
+    template <typename Context>
+    auto format(Backend::VK_UTILS::VulkanLayout layout, Context &ctx) const {
+        return fmt::formatter<std::string_view>::format(Backend::VK_UTILS::VkLayoutString(layout), ctx);
+    }
+};
