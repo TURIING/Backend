@@ -38,8 +38,7 @@ private:
     static constexpr uint32_t kEntrySize = sizeof(uint32_t);
 
     struct ConstantDescription {
-        // 各常量的声明类型，写入时据此校验取的是 variant 的哪个分支
-        std::vector<ConstantType> types;
+        std::vector<ConstantType> types;  // 各常量的声明类型，写入时据此校验取的是 variant 的哪个分支
         uint32_t                  offset = 0;
     };
 

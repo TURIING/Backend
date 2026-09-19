@@ -138,8 +138,7 @@ private:
 
     VkExternalFenceHandleTypeFlags m_fenceExportFlags = {};
 
-    // 设备/实例支持与否的可选项
-    bool m_debugMarkersSupported             = false;
+    bool m_debugMarkersSupported             = false;  // 设备/实例支持与否的可选项
     bool m_debugUtilsSupported               = false;
     bool m_isUnifiedMemoryArchitecture       = false;
     bool m_lazilyAllocatedMemorySupported    = false;
@@ -152,8 +151,7 @@ private:
     bool m_clipDistanceSupported             = false;
     bool m_imageCubeArraySupported           = false;
 
-    // 应用层可开关的选项
-    bool m_asyncPipelineCachePrewarmingEnabled = false;
+    bool m_asyncPipelineCachePrewarmingEnabled = false;  // 应用层可开关的选项
     bool m_parallelShaderCompileDisabled       = false;
     bool m_stagingBufferBypassEnabled          = false;
 

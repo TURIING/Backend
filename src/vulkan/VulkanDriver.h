@@ -62,8 +62,7 @@ class VulkanDriver final : public DriverBase {
 
     struct PipelineBindingState {
         VulkanProgramPtr program = {};  // push constant 的写入目标
-        // draw() 中提交动态 ubo 时使用
-        VkPipelineLayout            pipelineLayout    = VK_NULL_HANDLE;
+        VkPipelineLayout            pipelineLayout    = VK_NULL_HANDLE;  // draw() 中提交动态 ubo 时使用
         VK_UTILS::DescriptorSetMask descriptorSetMask = {};
 
         std::pair<bool, BindInDrawBundle> bindInDraw = { false, {} };

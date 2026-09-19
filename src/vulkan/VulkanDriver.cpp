@@ -514,8 +514,7 @@ void VulkanDriver::GenerateMipmaps(TextureHandle th) {
 
     LOG_ASSERT(layerCount < (1 << (sizeof(VulkanAttachment::layerCount) * 8)));
 
-    // 逐级 blit：每级都把上一级缩半拷进下一级，随后整体转回默认布局
-    uint8_t level = 0;
+    uint8_t level = 0;  // 逐级 blit：每级都把上一级缩半拷进下一级，随后整体转回默认布局
     int32_t srcw  = static_cast<int32_t>(t->width);
     int32_t srch  = static_cast<int32_t>(t->height);
     do {

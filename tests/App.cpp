@@ -45,8 +45,7 @@ constexpr uint32_t kIndexCount        = 1024;
 constexpr uint32_t kSwapChainWidth    = 1280;
 constexpr uint32_t kSwapChainHeight   = 720;
 
-// 纹理资源层的验证规模：句柄 arena 与驱动保持同一量级
-constexpr size_t   kHandleArenaSize = 8u * 1024u * 1024u;
+constexpr size_t   kHandleArenaSize = 8u * 1024u * 1024u;  // 纹理资源层的验证规模：句柄 arena 与驱动保持同一量级
 constexpr VkFormat kTestFormat      = VK_FORMAT_R8G8B8A8_UNORM;
 constexpr uint32_t kTestWidth       = 64;
 constexpr uint32_t kTestHeight      = 64;
@@ -74,8 +73,7 @@ bool VerifyHeadlessSwapChain(const EnginePtr &engine) {
         return false;
     }
 
-    // 空句柄调用须退化为 no-op 而不是崩溃
-    Backend::VulkanPlatform::ImageSyncData syncData;
+    Backend::VulkanPlatform::ImageSyncData syncData;  // 空句柄调用须退化为 no-op 而不是崩溃
     bool const                             nullHandleSafe = platform->Acquire(nullptr, &syncData) == VK_ERROR_UNKNOWN &&
                                 platform->Present(nullptr, 0, VK_NULL_HANDLE) == VK_ERROR_UNKNOWN &&
                                 !platform->HasResized(nullptr) && !platform->IsProtected(nullptr);
@@ -810,8 +808,7 @@ bool VerifyPipelineCache(VkDevice device, Backend::DriverBase &driverBase, const
     VkPipeline const                                        secondHandle = pipelineCache.GetOrCreatePipeline()->handle;
     bool const cacheHit = firstHandle != VK_NULL_HANDLE && firstHandle == secondHandle;
 
-    // 仅 cullMode 不同 → 必须新建一条管线
-    Backend::VulkanPipelineCache::RasterState otherState = rasterState;
+    Backend::VulkanPipelineCache::RasterState otherState = rasterState;  // 仅 cullMode 不同 → 必须新建一条管线
     otherState.cullMode                                  = VK_CULL_MODE_BACK_BIT;
     pipelineCache.BindRasterState(otherState);
     VkPipeline const otherHandle   = pipelineCache.GetOrCreatePipeline()->handle;
@@ -861,8 +858,7 @@ bool VerifyQueryManager(VkDevice device, const Backend::ResourceManagerPtr &reso
     Backend::VulkanTimerQueryPtr second      = queryManager.GetNextQuery(resourceManager);
     bool const                   indexReused = second && second->GetStartingQueryIndex() == releasedIndex;
 
-    // 池满时返回空而非越界
-    std::vector<Backend::VulkanTimerQueryPtr> exhausted;
+    std::vector<Backend::VulkanTimerQueryPtr> exhausted;  // 池满时返回空而非越界
     for (uint32_t i = 0; i < 64; ++i) {
         Backend::VulkanTimerQueryPtr extra = queryManager.GetNextQuery(resourceManager);
         if (!extra) {
@@ -1040,11 +1036,9 @@ void App::Run(const SetupCallback &setupCallback, const CleanUpCallback &cleanup
 // ---------------------------------------------------------------- 端到端绘制：三角形
 
 namespace {
-// 端到端绘制规模：小尺寸让 readPixels 的带 stride 读回足够便宜
-constexpr uint32_t kTriangleSize = 64;
+constexpr uint32_t kTriangleSize = 64;    // 端到端绘制规模：小尺寸让 readPixels 的带 stride 读回足够便宜
 
-// 片元着色器输出不透明红；允许 ±2 的量化误差
-constexpr uint8_t kExpectedRed    = 255;
+constexpr uint8_t kExpectedRed    = 255;  // 片元着色器输出不透明红；允许 ±2 的量化误差
 constexpr uint8_t kExpectedGreen  = 0;
 constexpr uint8_t kExpectedBlue   = 0;
 constexpr uint8_t kColorTolerance = 2;
@@ -1083,8 +1077,7 @@ bool VerifyDrawTriangleEndToEnd() {
         return false;
     }
 
-    // ---- 程序：顶点读 location 0 的 vec2，片元输出不透明红 ----
-    Backend::Program program;
+    Backend::Program program;  // ---- 程序：顶点读 location 0 的 vec2，片元输出不透明红 ----
     program.Shader(Backend::ShaderStage::VERTEX, Test::kTriangleVertexSpirv, sizeof(Test::kTriangleVertexSpirv));
     program.Shader(Backend::ShaderStage::FRAGMENT, Test::kTriangleFragmentSpirv, sizeof(Test::kTriangleFragmentSpirv));
     Backend::ProgramHandle const ph = engine->CreateProgram(std::move(program));

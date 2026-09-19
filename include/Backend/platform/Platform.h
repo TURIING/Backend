@@ -62,8 +62,7 @@ public:
     using ExternalImageHandleRef = ExternalImageHandle const &;
 
     struct CompositorTiming {
-        // 时间戳与时长均为纳秒，基准是 std::steady_clock
-        using time_point_ns = int64_t;
+        using time_point_ns = int64_t;  // 时间戳与时长均为纳秒，基准是 std::steady_clock
         using duration_ns   = int64_t;
 
         static constexpr time_point_ns INVALID = -1;  //!< 平台不支持该值

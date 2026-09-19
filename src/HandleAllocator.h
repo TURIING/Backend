@@ -234,8 +234,7 @@ private:
         }
     }
 
-    // 句柄 age 位段：4 位，其中低 2 位为调试标签
-    static constexpr uint32_t HANDLE_AGE_BIT_COUNT       = 4;
+    static constexpr uint32_t HANDLE_AGE_BIT_COUNT       = 4;  // 句柄 age 位段：4 位，其中低 2 位为调试标签
     static constexpr uint32_t HANDLE_DEBUG_TAG_BIT_COUNT = 2;
     static constexpr uint32_t HANDLE_AGE_SHIFT           = 27;
     static constexpr uint32_t HANDLE_HEAP_FLAG           = 0x80000000u;

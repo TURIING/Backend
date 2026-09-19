@@ -63,8 +63,7 @@ private:
     struct PipelineInfo {
         PipelineInfo(size_t size) : m_soa(size) { m_soa.Resize(size); }
 
-        // 列下标即 SoA 模板实参序号
-        static constexpr size_t kAttributeDescription   = 0;
+        static constexpr size_t kAttributeDescription   = 0;  // 列下标即 SoA 模板实参序号
         static constexpr size_t kBufferDescription      = 1;
         static constexpr size_t kOffsets                = 2;
         static constexpr size_t kAttributeToBufferIndex = 3;
@@ -280,8 +279,7 @@ struct VulkanDescriptorSet : public HwDescriptorSet, public Resource {
     VK_UTILS::UniformBufferBitmask const& dynamicUboMask;
     uint8_t const                        uniqueDynamicUboCount;
 
-    // 仅在绑定了外部采样器图像时需要重建布局
-    bool isLayoutDirty            = false;
+    bool isLayoutDirty            = false;  // 仅在绑定了外部采样器图像时需要重建布局
     bool isAnExternalSamplerBound = false;
 
 private:

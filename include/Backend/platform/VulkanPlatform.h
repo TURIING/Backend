@@ -72,8 +72,7 @@ public:
     struct ImageSyncData {
         static constexpr uint32_t INVALID_IMAGE_INDEX = UINT32_MAX;
 
-        // vkAcquireNextImage 等返回的下一张图像的索引
-        uint32_t    imageIndex          = INVALID_IMAGE_INDEX;
+        uint32_t    imageIndex          = INVALID_IMAGE_INDEX;  // vkAcquireNextImage 等返回的下一张图像的索引
         VkSemaphore imageReadySemaphore = VK_NULL_HANDLE;
     };
 

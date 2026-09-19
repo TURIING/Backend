@@ -70,8 +70,7 @@ private:
     bool const         m_flushAndWaitOnResize;
     bool const         m_transitionSwapChainImageLayoutForPresent;
 
-    // 附件由本对象持有，平台只提供 VkImage
-    std::vector<VulkanTexturePtr>   m_colors;
+    std::vector<VulkanTexturePtr>   m_colors;  // 附件由本对象持有，平台只提供 VkImage
     std::vector<VulkanSemaphorePtr> m_finishedDrawing;
     VulkanTexturePtr                m_depth;
     VkExtent2D                      m_extent{};

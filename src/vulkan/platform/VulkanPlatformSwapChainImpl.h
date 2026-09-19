@@ -78,8 +78,7 @@ private:
 
     VkInstance       m_instance;
     VkPhysicalDevice m_physicalDevice;
-    // 本类接管 surface 的所有权
-    VkSurfaceKHR     m_surface;
+    VkSurfaceKHR     m_surface;  // 本类接管 surface 的所有权
     VkSwapchainKHR   m_swapchain = VK_NULL_HANDLE;
     VkExtent2D const m_fallbackExtent;  // surface capabilities 未定义 currentExtent 时使用
     VkSemaphore      m_imageReady[kImageReadySemaphoreCount];

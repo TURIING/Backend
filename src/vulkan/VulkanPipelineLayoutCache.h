@@ -33,8 +33,7 @@ public:
     void Terminate() noexcept;
 
     struct PushConstantKey {
-        // push constant 按 stage 成组，每个 stage 一组
-        uint8_t stage = 0;
+        uint8_t stage = 0;  // push constant 按 stage 成组，每个 stage 一组
         uint8_t size  = 0;
         // 范围还有 offset 字段，但本项目的更新范围恒从 0 起，故不入键
     };

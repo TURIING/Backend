@@ -70,8 +70,7 @@ private:
     VulkanTexturePtr m_sidecarMSAA;  // sidecar 由持有它的纹理一同持有
 
     VkImage const     m_textureImage;
-    // 为 VK_NULL_HANDLE 表示图像由外部创建，本对象只借用不释放
-    VkDeviceMemory const    m_textureImageMemory;
+    VkDeviceMemory const    m_textureImageMemory;  // 为 VK_NULL_HANDLE 表示图像由外部创建，本对象只借用不释放
     VkFormat const          m_vkFormat;
     VkImageViewType const   m_viewType;
     VkImageSubresourceRange m_fullViewRange;

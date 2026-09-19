@@ -54,8 +54,7 @@ public:
 private:
     VkDevice m_device;
     VkQueryPool m_pool = VK_NULL_HANDLE;
-    // 每一位对应一个计时器（即一对查询）是否已分配
-    NS_UTILS::Bitset32 m_used;
+    NS_UTILS::Bitset32 m_used;  // 每一位对应一个计时器（即一对查询）是否已分配
     std::mutex         m_mutex;
 };
 

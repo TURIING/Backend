@@ -337,15 +337,13 @@ VulkanDescriptorSetPtr VulkanDescriptorSetCache::CreateSet(Handle<HwDescriptorSe
 
 void VulkanDescriptorSetCache::CloneSet(VulkanDescriptorSetPtr const& set, VK_UTILS::SamplerBitmask samplerMask) noexcept {
     auto const& layout = set->GetLayout();
-    // 按当前绑定布局新建集合
-    VkDescriptorSetLayout const genLayout = set->boundLayout;
+    VkDescriptorSetLayout const genLayout = set->boundLayout;  // 按当前绑定布局新建集合
     VkDescriptorSet const       newSet    = GetVkSet(layout->count, genLayout);
 
     // 每个位掩码的位是「绑定下标」，且顶点/片元两阶段分列高低半区；
     // 折到低半区后即得到一份合并后的绑定集合
     Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
-    // samplerMask 中的采样器不拷贝
-    Bitmask const samplers     = layout->bitmask.sampler ^ samplerMask;
+    Bitmask const samplers     = layout->bitmask.sampler ^ samplerMask;  // samplerMask 中的采样器不拷贝
     Bitmask const copyBindings = FoldBitsInHalf(ubo | samplers);
 
     VkDescriptorSet const srcSet = set->GetVkSet();

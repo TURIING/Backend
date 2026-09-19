@@ -147,8 +147,7 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
     }
     bool const hasSubpasses = config.subpassMask != 0;
 
-    // 以下三个别名只为缩短后续初始化的书写
-    VkAttachmentLoadOp const  kClear        = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    VkAttachmentLoadOp const  kClear        = VK_ATTACHMENT_LOAD_OP_CLEAR;  // 以下三个别名只为缩短后续初始化的书写
     VkAttachmentLoadOp const  kDontCare     = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     VkAttachmentLoadOp const  kKeep         = VK_ATTACHMENT_LOAD_OP_LOAD;
     VkAttachmentStoreOp const kDisableStore = VK_ATTACHMENT_STORE_OP_DONT_CARE;
