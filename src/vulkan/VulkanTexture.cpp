@@ -246,7 +246,7 @@ VulkanTextureState::VulkanTextureState(const VulkanStagePoolPtr& stagePool, cons
       m_textureImageMemory(deviceMemory),
       m_vkFormat(format),
       m_viewType(viewType),
-      m_fullViewRange{ VK_UTILS::GetImageAspect(format), 0, levels, 0, layerCount },
+      m_fullViewRange{ VK_UTILS::TransVkFormatToVkImageAspectFlags(format), 0, levels, 0, layerCount },
       m_ycbcr{ ycbcrConversion },
       m_defaultLayout(getDefaultLayoutImpl(usage)),
       m_usage(usage),
@@ -305,7 +305,7 @@ VulkanTexture::VulkanTexture(const VulkanContextPtr& context, VkDevice device, V
                              const VulkanStagePoolPtr& stagePool)
     : HwTexture(getSamplerTypeFromDepth(depth), 1, samples, width, height, depth, TextureFormat::UNUSED, tusage, false),
       m_state(resourceManager->AllocateAndConstruct<VulkanTextureState>(
-              stagePool, commands, allocator, device, image, deviceMemory, format, VK_UTILS::GetViewType(SamplerType::SAMPLER_2D),
+              stagePool, commands, allocator, device, image, deviceMemory, format, VK_UTILS::TransSamplerTypeToVkImageViewType(SamplerType::SAMPLER_2D),
               /*levels=*/1, getLayerCountFromDepth(depth), conversion, getUsage(context, samples, VK_NULL_HANDLE, format, tusage),
               HasAnyFlag(tusage, TextureUsage::PROTECTED))) {
     m_primaryViewRange = m_state->m_fullViewRange;
@@ -317,7 +317,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, c
                              SamplerType target, uint8_t levels, TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h,
                              uint32_t depth, TextureUsage tusage, const VulkanStagePoolPtr& stagePool)
     : HwTexture(target, levels, samples, w, h, depth, tformat, tusage, false) {
-    VkFormat const vkFormat    = VK_UTILS::GetVkFormat(tformat);
+    VkFormat const vkFormat    = VK_UTILS::TransTextureFormatToVkFormat(tformat);
     bool const     isProtected = HasAnyFlag(tusage, TextureUsage::PROTECTED);
 
     VkImageCreateInfo imageInfo{
@@ -410,7 +410,7 @@ VulkanTexture::VulkanTexture(VkDevice device, VkPhysicalDevice physicalDevice, c
     FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS) << "Unable to bind image." << " error=" << static_cast<int32_t>(result);
 
     m_state = resourceManager->AllocateAndConstruct<VulkanTextureState>(
-            stagePool, commands, allocator, device, textureImage, textureImageMemory, vkFormat, VK_UTILS::GetViewType(target), levels,
+            stagePool, commands, allocator, device, textureImage, textureImageMemory, vkFormat, VK_UTILS::TransSamplerTypeToVkImageViewType(target), levels,
             getLayerCount(target, depth), VK_NULL_HANDLE /* ycbcrConversion */, imageInfo.usage, isProtected);
 
     m_primaryViewRange = m_state->m_fullViewRange;
@@ -443,8 +443,8 @@ void VulkanTexture::UpdateImage(const PixelBufferDescriptor& data, uint32_t widt
     assert_invariant(!m_state->m_isProtected);
 
     // 上游此处还会经 DataReshaper 把 3 分量数据补成 4 分量；该前端件不在移植范围内，按原样上传
-    VkFormat const hostFormat   = VK_UTILS::GetVkFormat(data.format, data.type);
-    VkFormat const deviceFormat = VK_UTILS::GetVkFormatLinear(m_state->m_vkFormat);
+    VkFormat const hostFormat   = VK_UTILS::TransPixelDataFormatToVkFormat(data.format, data.type);
+    VkFormat const deviceFormat = VK_UTILS::TransVkFormatToLinearVkFormat(m_state->m_vkFormat);
     if (hostFormat != deviceFormat && hostFormat != VK_FORMAT_UNDEFINED) {
         assert_invariant(xoffset == 0 && yoffset == 0 && zoffset == 0 && "Offsets not yet supported when format conversion is required.");
         updateImageWithBlit(data, width, height, depth, miplevel);
@@ -472,7 +472,7 @@ void VulkanTexture::UpdateImage(const PixelBufferDescriptor& data, uint32_t widt
     commands.Acquire(stageSegment);
     commands.Acquire(VulkanTexturePtr(this));
 
-    bool const isDepth = (GetImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
+    bool const isDepth = (TransVkFormatToVkImageAspectFlags() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
 
     VkBufferImageCopy copyRegion = {
         .bufferOffset      = stageSegment->GetOffset(),
@@ -489,7 +489,7 @@ void VulkanTexture::UpdateImage(const PixelBufferDescriptor& data, uint32_t widt
     };
 
     VkImageSubresourceRange transitionRange = {
-        .aspectMask     = GetImageAspect(),
+        .aspectMask     = TransVkFormatToVkImageAspectFlags(),
         .baseMipLevel   = miplevel,
         .levelCount     = 1,
         .baseArrayLayer = 0,
@@ -509,7 +509,7 @@ void VulkanTexture::UpdateImage(const PixelBufferDescriptor& data, uint32_t widt
 
     constexpr VulkanLayout kNewLayout = VulkanLayout::TRANSFER_DST;
     VulkanLayout           nextLayout = GetLayout(transitionRange.baseArrayLayer, miplevel);
-    VkImageLayout const    newVkLayout = VK_UTILS::GetVkLayout(kNewLayout);
+    VkImageLayout const    newVkLayout = VK_UTILS::TransVulkanLayoutToVkImageLayout(kNewLayout);
 
     // 首次上传时按用途推断上传后应回到的布局
     if (nextLayout == VulkanLayout::UNDEFINED) {
@@ -546,7 +546,7 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     constexpr uint32_t kLayer = 0;  // blit 形式的格式转换不支持 3D 图像与 cubemap，只处理第 0 层
 
     VkOffset3D const         rect[2]{ { 0, 0, 0 }, { int32_t(width), int32_t(height), 1 } };
-    VkImageAspectFlags const aspect = GetImageAspect();
+    VkImageAspectFlags const aspect = TransVkFormatToVkImageAspectFlags();
 
     VkImageBlit const blitRegions[1] = { {
             .srcSubresource = { aspect, 0, 0, 1 },
@@ -561,8 +561,8 @@ void VulkanTexture::updateImageWithBlit(const PixelBufferDescriptor& data, uint3
     VulkanLayout const     oldLayout  = GetLayout(kLayer, miplevel);
     TransitionLayout(&commands, range, kNewLayout);
 
-    vkCmdBlitImage(cmdbuf, stage->GetImage(), VK_UTILS::GetVkLayout(VulkanLayout::TRANSFER_SRC), m_state->m_textureImage,
-                   VK_UTILS::GetVkLayout(kNewLayout), 1, blitRegions, VK_FILTER_NEAREST);
+    vkCmdBlitImage(cmdbuf, stage->GetImage(), VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::TRANSFER_SRC), m_state->m_textureImage,
+                   VK_UTILS::TransVulkanLayoutToVkImageLayout(kNewLayout), 1, blitRegions, VK_FILTER_NEAREST);
 
     TransitionLayout(&commands, range, oldLayout);
 }
@@ -594,7 +594,7 @@ VkImageView VulkanTexture::GetView(const VkImageSubresourceRange& range) {
     return getImageView(range, m_state->m_viewType, m_swizzle);
 }
 
-VkImageAspectFlags VulkanTexture::GetImageAspect() const { return VK_UTILS::GetImageAspect(m_state->m_vkFormat); }
+VkImageAspectFlags VulkanTexture::TransVkFormatToVkImageAspectFlags() const { return VK_UTILS::TransVkFormatToVkImageAspectFlags(m_state->m_vkFormat); }
 
 VkImageView VulkanTexture::getImageView(VkImageSubresourceRange range, VkImageViewType viewType, VkComponentMapping swizzle) {
     return m_state->getImageView(range, viewType, swizzle);
@@ -672,7 +672,7 @@ bool VulkanTexture::TransitionLayout(VkCommandBuffer cmdbuf, const VkImageSubres
 
 void VulkanTexture::SamplerToAttachmentBarrier(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range) {
     VkCommandBuffer const cmdbuf = commands->Buffer();
-    VkImageLayout const   layout = VK_UTILS::GetVkLayout(GetLayout(range.baseArrayLayer, range.baseMipLevel));
+    VkImageLayout const   layout = VK_UTILS::TransVulkanLayoutToVkImageLayout(GetLayout(range.baseArrayLayer, range.baseMipLevel));
 
     VkImageMemoryBarrier const barrier = {
         .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -692,7 +692,7 @@ void VulkanTexture::SamplerToAttachmentBarrier(VulkanCommandBuffer* commands, co
 
 void VulkanTexture::AttachmentToSamplerBarrier(VulkanCommandBuffer* commands, const VkImageSubresourceRange& range) {
     VkCommandBuffer const cmdbuf = commands->Buffer();
-    VkImageLayout const   layout = VK_UTILS::GetVkLayout(GetLayout(range.baseArrayLayer, range.baseMipLevel));
+    VkImageLayout const   layout = VK_UTILS::TransVulkanLayoutToVkImageLayout(GetLayout(range.baseArrayLayer, range.baseMipLevel));
 
     VkImageMemoryBarrier const barrier = {
         .sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -748,7 +748,7 @@ VulkanLayout VulkanTexture::GetLayout(uint32_t layer, uint32_t level) const {
     return m_state->m_subresourceLayouts.Get(key);
 }
 
-bool VulkanAttachment::IsDepth() const { return (texture->GetImageAspect() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0; }
+bool VulkanAttachment::IsDepth() const { return (texture->TransVkFormatToVkImageAspectFlags() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0; }
 
 VkImage VulkanAttachment::GetImage() const { return texture ? texture->GetImage() : VK_NULL_HANDLE; }
 
@@ -770,7 +770,7 @@ VkImageView VulkanAttachment::GetImageView() {
 VkImageSubresourceRange VulkanAttachment::GetSubresourceRange() const {
     assert_invariant(texture);
     return {
-        .aspectMask     = texture->GetImageAspect(),
+        .aspectMask     = texture->TransVkFormatToVkImageAspectFlags(),
         .baseMipLevel   = uint32_t(level),
         .levelCount     = 1,
         .baseArrayLayer = uint32_t(layer),

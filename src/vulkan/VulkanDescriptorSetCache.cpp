@@ -299,7 +299,7 @@ void VulkanDescriptorSetCache::UpdateSampler(VulkanDescriptorSetPtr const& set, 
                                              VkSampler sampler, VkDescriptorSetLayout /*externalSamplerLayout*/) noexcept {
     VkDescriptorSet const   vkSet        = set->GetVkSet();
     VkImageSubresourceRange range        = texture->GetPrimaryViewRange();
-    VkImageViewType const   expectedType = texture->GetViewType();
+    VkImageViewType const   expectedType = texture->TransSamplerTypeToVkImageViewType();
     if (HasAnyFlag(texture->usage, TextureUsage::DEPTH_ATTACHMENT) && expectedType == VK_IMAGE_VIEW_TYPE_2D) {
         // 带 mip 的深度纹理中某些层级可能被用作附件：此时视图范围退化为单层单级
         range.levelCount = 1;
@@ -308,7 +308,7 @@ void VulkanDescriptorSetCache::UpdateSampler(VulkanDescriptorSetPtr const& set, 
     VkDescriptorImageInfo info = {
         .sampler     = sampler,
         .imageView   = texture->GetView(range),
-        .imageLayout = VK_UTILS::GetVkLayout(texture->GetSamplerLayout()),
+        .imageLayout = VK_UTILS::TransVulkanLayoutToVkImageLayout(texture->GetSamplerLayout()),
     };
     VkWriteDescriptorSet descriptorWrite = {
         .sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -328,9 +328,9 @@ void VulkanDescriptorSetCache::UpdateInputAttachment(VulkanDescriptorSetPtr cons
 }
 
 VulkanDescriptorSetPtr VulkanDescriptorSetCache::CreateSet(Handle<HwDescriptorSet> handle, VulkanDescriptorSetLayoutPtr const& layout) {
-    auto const  vkSet    = m_descriptorPool->ObtainSet(layout->count, layout->GetVkLayout());
+    auto const  vkSet    = m_descriptorPool->ObtainSet(layout->count, layout->TransVulkanLayoutToVkImageLayout());
     auto const& count    = layout->count;
-    auto const  vkLayout = layout->GetVkLayout();
+    auto const  vkLayout = layout->TransVulkanLayoutToVkImageLayout();
     return m_resourceManager->Make<VulkanDescriptorSet>(
         handle, layout, [vkSet, count, vkLayout, this](VulkanDescriptorSet*) { this->ManualRecycle(count, vkLayout, vkSet); }, vkSet);
 }

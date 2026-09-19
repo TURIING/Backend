@@ -217,7 +217,7 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
         if (config.colorFormat[i] == VK_FORMAT_UNDEFINED) {
             continue;
         }
-        VkImageLayout const subpassLayout = VK_UTILS::GetVkLayout(VulkanLayout::COLOR_ATTACHMENT);
+        VkImageLayout const subpassLayout = VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::COLOR_ATTACHMENT);
         uint32_t            index;
 
         if (!hasSubpasses) {
@@ -258,8 +258,8 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
             .storeOp        = (discardEnd || (config.usesLazilyAllocatedMemory & (1 << i))) ? kDisableStore : kEnableStore,
             .stencilLoadOp  = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout  = VK_UTILS::GetVkLayout(VulkanLayout::COLOR_ATTACHMENT),
-            .finalLayout    = VK_UTILS::GetVkLayout(kFinalColorAttachmentLayout),
+            .initialLayout  = VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::COLOR_ATTACHMENT),
+            .finalLayout    = VK_UTILS::TransVulkanLayoutToVkImageLayout(kFinalColorAttachmentLayout),
         };
     }
 
@@ -284,7 +284,7 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
         }
 
         pResolveAttachment->attachment = attachmentIndex;
-        pResolveAttachment->layout     = VK_UTILS::GetVkLayout(VulkanLayout::COLOR_ATTACHMENT_RESOLVE);
+        pResolveAttachment->layout     = VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::COLOR_ATTACHMENT_RESOLVE);
         ++pResolveAttachment;
 
         attachments[attachmentIndex++] = {
@@ -294,8 +294,8 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
             .storeOp        = kEnableStore,
             .stencilLoadOp  = kDontCare,
             .stencilStoreOp = kDisableStore,
-            .initialLayout  = VK_UTILS::GetVkLayout(VulkanLayout::COLOR_ATTACHMENT),
-            .finalLayout    = VK_UTILS::GetVkLayout(kFinalColorAttachmentLayout),
+            .initialLayout  = VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::COLOR_ATTACHMENT),
+            .finalLayout    = VK_UTILS::TransVulkanLayoutToVkImageLayout(kFinalColorAttachmentLayout),
         };
     }
 
@@ -307,7 +307,7 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
         bool const discardStartStencil = HasAnyFlag(config.discardStart, TargetBufferFlags::STENCIL);
         bool const discardEndStencil   = HasAnyFlag(config.discardEnd, TargetBufferFlags::STENCIL);
 
-        depthStencilAttachmentRef.layout     = VK_UTILS::GetVkLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
+        depthStencilAttachmentRef.layout     = VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::DEPTH_STENCIL_ATTACHMENT);
         depthStencilAttachmentRef.attachment = attachmentIndex;
         attachments[attachmentIndex++]       = {
                   .format         = config.depthStencilFormat,
@@ -316,8 +316,8 @@ VulkanRenderPassPtr VulkanFboCache::GetRenderPass(RenderPassKey const& config, c
                   .storeOp        = discardEndDepth ? kDisableStore : kEnableStore,
                   .stencilLoadOp  = clearStencil ? kClear : (discardStartStencil ? kDontCare : kKeep),
                   .stencilStoreOp = discardEndStencil ? kDisableStore : kEnableStore,
-                  .initialLayout  = VK_UTILS::GetVkLayout(config.initialDepthStencilLayout),
-                  .finalLayout    = VK_UTILS::GetVkLayout(kFinalDepthStencilAttachmentLayout),
+                  .initialLayout  = VK_UTILS::TransVulkanLayoutToVkImageLayout(config.initialDepthStencilLayout),
+                  .finalLayout    = VK_UTILS::TransVulkanLayoutToVkImageLayout(kFinalDepthStencilAttachmentLayout),
         };
     }
     renderPassInfo.attachmentCount = attachmentIndex;

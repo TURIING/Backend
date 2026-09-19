@@ -655,12 +655,12 @@ bool VerifyDescriptorSetLayoutCache(VkDevice device, const Backend::ResourceMana
         resourceManager->AllocHandle<Backend::VulkanDescriptorSetLayout>();
     Backend::VulkanDescriptorSetLayoutPtr created = layoutCache.CreateLayout(handle, std::move(layout));
 
-    bool const createdValid = created && created->GetVkLayout() != VK_NULL_HANDLE && created->count.ubo == 1 &&
+    bool const createdValid = created && created->TransVulkanLayoutToVkImageLayout() != VK_NULL_HANDLE && created->count.ubo == 1 &&
                               created->count.Total() == 1 && !created->HasExternalSamplers();
 
     // 同一掩码再取应命中同一 VkDescriptorSetLayout
-    VkDescriptorSetLayout const again = layoutCache.GetVkLayout(created->bitmask, created->bitmask.externalSampler);
-    bool const                  hit   = again == created->GetVkLayout();
+    VkDescriptorSetLayout const again = layoutCache.TransVulkanLayoutToVkImageLayout(created->bitmask, created->bitmask.externalSampler);
+    bool const                  hit   = again == created->TransVulkanLayoutToVkImageLayout();
 
     layoutCache.Terminate();
     resourceManager->Destroy(created);

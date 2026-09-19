@@ -36,7 +36,7 @@ struct VulkanLayoutTransition {
     VkImageSubresourceRange subresources;
 };
 
-NODISCARD inline const char *VkLayoutString(VulkanLayout layout) {
+NODISCARD inline const char *TransVulkanLayoutToString(VulkanLayout layout) {
     switch (layout) {
         CASE_FROM_TO(VulkanLayout::UNDEFINED, "UNDEFINED");
         CASE_FROM_TO(VulkanLayout::STAGING, "STAGING");
@@ -54,7 +54,7 @@ NODISCARD inline const char *VkLayoutString(VulkanLayout layout) {
 }
 
 // 同一布局下的两种状态间无需屏障，故以 Vulkan 原生布局为键比较
-constexpr inline VkImageLayout GetVkLayout(VulkanLayout layout) {
+constexpr inline VkImageLayout TransVulkanLayoutToVkImageLayout(VulkanLayout layout) {
     switch (layout) {
         case VulkanLayout::UNDEFINED:
             return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -94,7 +94,7 @@ bool IsVkStencilFormat(VkFormat format);
 
 bool IsVkYcbcrConversionFormat(VkFormat format);
 
-VkImageAspectFlags GetImageAspect(VkFormat format);
+VkImageAspectFlags TransVkFormatToVkImageAspectFlags(VkFormat format);
 
 uint8_t ReduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
@@ -102,11 +102,11 @@ uint8_t ReduceSampleCount(uint8_t sampleCount, VkSampleCountFlags mask);
 
 END_NS_BACKEND
 
-// 日志里直接写 VulkanLayout 时按枚举名输出，复用 VkLayoutString 的映射
+// 日志里直接写 VulkanLayout 时按枚举名输出，复用 TransVulkanLayoutToString 的映射
 template <>
 struct fmt::formatter<Backend::VK_UTILS::VulkanLayout> : fmt::formatter<std::string_view> {
     template <typename Context>
     auto format(Backend::VK_UTILS::VulkanLayout layout, Context &ctx) const {
-        return fmt::formatter<std::string_view>::format(Backend::VK_UTILS::VkLayoutString(layout), ctx);
+        return fmt::formatter<std::string_view>::format(Backend::VK_UTILS::TransVulkanLayoutToString(layout), ctx);
     }
 };

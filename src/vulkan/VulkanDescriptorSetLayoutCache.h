@@ -37,7 +37,7 @@ public:
     NODISCARD VulkanDescriptorSetLayoutPtr CreateLayout(Handle<HwDescriptorSetLayout> handle, DescriptorSetLayout&& info);
 
     // 供外部采样器路径使用：同一布局可带不可变采样器再取一份
-    NODISCARD VkDescriptorSetLayout GetVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks, VK_UTILS::SamplerBitmask externalSamplers,
+    NODISCARD VkDescriptorSetLayout TransVulkanLayoutToVkImageLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks, VK_UTILS::SamplerBitmask externalSamplers,
                                                 std::vector<std::pair<uint64_t, VkSampler>> immutableSamplers = {});
 
 private:

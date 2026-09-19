@@ -110,7 +110,7 @@ void VulkanDescriptorSetLayoutCache::Terminate() noexcept {
     m_vkLayouts.clear();
 }
 
-VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::GetVkLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
+VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::TransVulkanLayoutToVkImageLayout(VulkanDescriptorSetLayout::Bitmask const& bitmasks,
                                                                  VK_UTILS::SamplerBitmask externalSamplers,
                                                                  std::vector<std::pair<uint64_t, VkSampler>> immutableSamplers) {
     LayoutKey key = {
@@ -142,7 +142,7 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::GetVkLayout(VulkanDescript
 
 VulkanDescriptorSetLayoutPtr VulkanDescriptorSetLayoutCache::CreateLayout(Handle<HwDescriptorSetLayout> handle, DescriptorSetLayout&& info) {
     BitmaskGroup maskGroup = VulkanDescriptorSetLayout::Bitmask::FromLayoutDescription(info);
-    return m_resourceManager->Make<VulkanDescriptorSetLayout>(handle, std::move(info), GetVkLayout(maskGroup, maskGroup.externalSampler));
+    return m_resourceManager->Make<VulkanDescriptorSetLayout>(handle, std::move(info), TransVulkanLayoutToVkImageLayout(maskGroup, maskGroup.externalSampler));
 }
 
 END_NS_BACKEND

@@ -106,7 +106,7 @@ GetVkTransition(VulkanLayoutTransition const &transition) {
     }
 
     return std::make_tuple(srcAccessMask, dstAccessMask, srcStage, dstStage,
-                           GetVkLayout(transition.oldLayout), GetVkLayout(transition.newLayout));
+                           TransVulkanLayoutToVkImageLayout(transition.oldLayout), TransVulkanLayoutToVkImageLayout(transition.newLayout));
 }
 
 }  // namespace
@@ -137,7 +137,7 @@ bool TransitionLayout(VkCommandBuffer cmdbuffer, VulkanLayoutTransition transiti
     return true;
 }
 
-VkImageAspectFlags GetImageAspect(VkFormat format) {
+VkImageAspectFlags TransVkFormatToVkImageAspectFlags(VkFormat format) {
     switch (format) {
         case VK_FORMAT_D16_UNORM_S8_UINT:
         case VK_FORMAT_D24_UNORM_S8_UINT:

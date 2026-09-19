@@ -59,17 +59,17 @@ CallbackHandler::Callback syncCallbackWrapper = [](void* userData) {
 };
 
 // 外部 YCbCr 格式描述 → 不可变采样器换算参数
-inline VulkanYcbcrConversionCache::Params GetYcbcrConversionParams(VulkanPlatform::ExternalYcbcrFormat const& format) {
+inline VulkanYcbcrConversionCache::Params TransExternalYcbcrFormatToParams(VulkanPlatform::ExternalYcbcrFormat const& format) {
     return VulkanYcbcrConversionCache::Params{
         .conversion = {
-            .ycbcrModel   = VK_UTILS::GetYcbcrModelConversionFilament(format.ycbcrModelConversion),
-            .r            = VK_UTILS::GetSwizzleFilament(VK_COMPONENT_SWIZZLE_R, 0),
-            .g            = VK_UTILS::GetSwizzleFilament(VK_COMPONENT_SWIZZLE_G, 1),
-            .b            = VK_UTILS::GetSwizzleFilament(VK_COMPONENT_SWIZZLE_B, 2),
-            .a            = VK_UTILS::GetSwizzleFilament(VK_COMPONENT_SWIZZLE_A, 3),
-            .ycbcrRange   = VK_UTILS::GetYcbcrRangeFilament(format.ycbcrRange),
-            .xChromaOffset = VK_UTILS::GetChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
-            .yChromaOffset = VK_UTILS::GetChromaLocationFilament(VK_CHROMA_LOCATION_MIDPOINT),
+            .ycbcrModel   = VK_UTILS::TransVkSamplerYcbcrModelConversionToSamplerYcbcrModelConversion(format.ycbcrModelConversion),
+            .r            = VK_UTILS::TransVkComponentSwizzleToTextureSwizzle(VK_COMPONENT_SWIZZLE_R, 0),
+            .g            = VK_UTILS::TransVkComponentSwizzleToTextureSwizzle(VK_COMPONENT_SWIZZLE_G, 1),
+            .b            = VK_UTILS::TransVkComponentSwizzleToTextureSwizzle(VK_COMPONENT_SWIZZLE_B, 2),
+            .a            = VK_UTILS::TransVkComponentSwizzleToTextureSwizzle(VK_COMPONENT_SWIZZLE_A, 3),
+            .ycbcrRange   = VK_UTILS::TransVkSamplerYcbcrRangeToSamplerYcbcrRange(format.ycbcrRange),
+            .xChromaOffset = VK_UTILS::TransVkChromaLocationToChromaLocation(VK_CHROMA_LOCATION_MIDPOINT),
+            .yChromaOffset = VK_UTILS::TransVkChromaLocationToChromaLocation(VK_CHROMA_LOCATION_MIDPOINT),
             .chromaFilter  = SamplerMagFilter::Nearest,
         },
         .format         = VK_FORMAT_UNDEFINED,
@@ -479,7 +479,7 @@ void VulkanDriver::CreateTextureViewSwizzleR(TextureHandle th, TextureHandle tex
                                              TextureSwizzle g, TextureSwizzle b, TextureSwizzle a,
                                              NS_UTILS::ImmutableString&& tag) {
     TextureSwizzle const     swizzleArray[] = { r, g, b, a };
-    VkComponentMapping const swizzle        = VK_UTILS::GetSwizzleMap(swizzleArray);
+    VkComponentMapping const swizzle        = VK_UTILS::TransTextureSwizzleToVkComponentMapping(swizzleArray);
     auto                     src            = m_resMgr->Acquire<VulkanTexture>(texture);
     m_resMgr->Make<VulkanTexture>(th, mPlatform->GetVkDevice(), mPlatform->GetVkPhysicalDevice(), m_context,
                                   m_allocator, m_commands, src, swizzle);
@@ -637,7 +637,7 @@ void VulkanDriver::CreateProgramR(ProgramHandle ph, Program&& program, NS_UTILS:
         auto                layoutHandle      = m_resMgr->AllocHandle<VulkanDescriptorSetLayout>();
         auto layout = m_descriptorSetLayoutCache->CreateLayout(layoutHandle, std::move(layoutDescription));
         layouts[layoutBinding.set]   = layout;
-        vkLayouts[layoutBinding.set] = layout->GetVkLayout();
+        vkLayouts[layoutBinding.set] = layout->TransVulkanLayoutToVkImageLayout();
         if (layout->HasExternalSamplers()) {
             hasExternalSamplers = true;
         }
@@ -657,7 +657,7 @@ void VulkanDriver::CreateProgramR(ProgramHandle ph, Program&& program, NS_UTILS:
 
     for (auto const& format : m_context->GetPipelineCachePrewarmExternalFormats()) {
         VkSamplerYcbcrConversion const vkConversion =
-            m_ycbcrConversionCache->GetConversion(GetYcbcrConversionParams(format));
+            m_ycbcrConversionCache->GetConversion(TransExternalYcbcrFormatToParams(format));
         VkSampler const externalSampler = m_samplerCache->GetSampler({ .sampler = {}, .conversion = vkConversion });
 
         for (size_t i = 0; i < MAX_DESCRIPTOR_SET_COUNT; ++i) {
@@ -667,7 +667,7 @@ void VulkanDriver::CreateProgramR(ProgramHandle ph, Program&& program, NS_UTILS:
             // 预热只需要「大致像」的采样器组合：遍历可能出现的采样器类型即可命中驱动缓存
             std::vector<std::pair<uint64_t, VkSampler>> externalSamplers(layouts[i]->bitmask.externalSampler.Count(),
                                                                          { 0, externalSampler });
-            vkLayouts[i] = m_descriptorSetLayoutCache->GetVkLayout(
+            vkLayouts[i] = m_descriptorSetLayoutCache->TransVulkanLayoutToVkImageLayout(
                 layouts[i]->bitmask, layouts[i]->bitmask.externalSampler, externalSamplers);
         }
 
@@ -1324,7 +1324,7 @@ void VulkanDriver::BindPipeline(PipelineState const& state) {
     VulkanDescriptorSetLayout::DescriptorSetLayoutArray vkLayouts;
     std::transform(
         layoutHandles.begin(), layoutHandles.end(), vkLayouts.begin(),
-        [](auto const& layout) -> VkDescriptorSetLayout { return layout ? layout->GetVkLayout() : VK_NULL_HANDLE; });
+        [](auto const& layout) -> VkDescriptorSetLayout { return layout ? layout->TransVulkanLayoutToVkImageLayout() : VK_NULL_HANDLE; });
     auto program        = m_resMgr->Acquire<VulkanProgram>(state.program);
     auto pipelineLayout = m_pipelineLayoutCache->GetLayout(vkLayouts, program);
     bindPipelineImpl(state, pipelineLayout, descriptorSetMask);
@@ -1349,16 +1349,16 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& state, VkPipelineLayout
 
     // 与上游逐字段对齐：RasterState 的位域布局即契约，字段顺序与宽度都不可改
     VulkanPipelineCache::RasterState const vulkanRasterState{
-        .cullMode                = VK_UTILS::GetCullMode(rasterState.culling),
-        .frontFace               = VK_UTILS::GetFrontFace(rasterState.inverseFrontFaces),
+        .cullMode                = VK_UTILS::TransCullingModeToVkCullModeFlags(rasterState.culling),
+        .frontFace               = VK_UTILS::TransInverseFrontFacesToVkFrontFace(rasterState.inverseFrontFaces),
         .depthBiasEnable         = (depthOffset.constant || depthOffset.slope) ? VK_TRUE : VK_FALSE,
         .blendEnable             = rasterState.HasBlending(),
         .depthWriteEnable        = rasterState.depthWrite,
         .alphaToCoverageEnable   = rasterState.alphaToCoverage,
-        .srcColorBlendFactor     = VK_UTILS::GetBlendFactor(rasterState.blendFunctionSrcRGB),
-        .dstColorBlendFactor     = VK_UTILS::GetBlendFactor(rasterState.blendFunctionDstRGB),
-        .srcAlphaBlendFactor     = VK_UTILS::GetBlendFactor(rasterState.blendFunctionSrcAlpha),
-        .dstAlphaBlendFactor     = VK_UTILS::GetBlendFactor(rasterState.blendFunctionDstAlpha),
+        .srcColorBlendFactor     = VK_UTILS::TransBlendFunctionToVkBlendFactor(rasterState.blendFunctionSrcRGB),
+        .dstColorBlendFactor     = VK_UTILS::TransBlendFunctionToVkBlendFactor(rasterState.blendFunctionDstRGB),
+        .srcAlphaBlendFactor     = VK_UTILS::TransBlendFunctionToVkBlendFactor(rasterState.blendFunctionSrcAlpha),
+        .dstAlphaBlendFactor     = VK_UTILS::TransBlendFunctionToVkBlendFactor(rasterState.blendFunctionDstAlpha),
         .colorWriteMask          = static_cast<VkColorComponentFlags>(rasterState.colorWrite ? 0xfu : 0x0u),
         .rasterizationSamples    = rt->GetSamples(),
         .depthClamp              = static_cast<uint8_t>(rasterState.depthClamp ? 1u : 0u),
@@ -1371,7 +1371,7 @@ void VulkanDriver::bindPipelineImpl(PipelineState const& state, VkPipelineLayout
     };
 
     // Vulkan 里拓扑属于管线状态
-    VkPrimitiveTopology const topology = VK_UTILS::GetPrimitiveTopology(state.primitiveType);
+    VkPrimitiveTopology const topology = VK_UTILS::TransPrimitiveTypeToVkPrimitiveTopology(state.primitiveType);
 
     VkVertexInputAttributeDescription const* attribDesc = vbi->GetAttribDescriptions();
     VkVertexInputBindingDescription const*   bufferDesc = vbi->GetBufferDescriptions();
@@ -1598,7 +1598,7 @@ bool VulkanDriver::acquireNextSwapchainImage() {
 
 // 这些返回值决定前端选择哪条渲染路径，故逐条对照上游实现，不留占位返回
 bool VulkanDriver::IsTextureFormatSupported(TextureFormat format) {
-    VkFormat const vkformat = VK_UTILS::GetVkFormat(format);
+    VkFormat const vkformat = VK_UTILS::TransTextureFormatToVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -1624,7 +1624,7 @@ bool VulkanDriver::IsTextureFormatMipmappable(TextureFormat format) {
 }
 
 bool VulkanDriver::IsTextureFormatFilterable(TextureFormat format) {
-    VkFormat const vkformat = VK_UTILS::GetVkFormat(format);
+    VkFormat const vkformat = VK_UTILS::TransTextureFormatToVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -1634,7 +1634,7 @@ bool VulkanDriver::IsTextureFormatFilterable(TextureFormat format) {
 }
 
 bool VulkanDriver::IsRenderTargetFormatSupported(TextureFormat format) {
-    VkFormat const vkformat = VK_UTILS::GetVkFormat(format);
+    VkFormat const vkformat = VK_UTILS::TransTextureFormatToVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
         return false;
     }
@@ -1679,7 +1679,7 @@ bool VulkanDriver::IsDepthStencilResolveSupported() { return false; }
 
 bool VulkanDriver::IsDepthStencilBlitSupported(TextureFormat format) {
     auto const& formats = m_context->GetBlittableDepthStencilFormats();
-    return std::find(formats.begin(), formats.end(), VK_UTILS::GetVkFormat(format)) != formats.end();
+    return std::find(formats.begin(), formats.end(), VK_UTILS::TransTextureFormatToVkFormat(format)) != formats.end();
 }
 
 bool VulkanDriver::IsDepthClampSupported() { return m_context->IsDepthClampSupported(); }
@@ -1882,8 +1882,8 @@ void VulkanDriver::Resolve(TextureHandle dst, uint8_t dstLevel, uint8_t dstLayer
     LOG_ASSERT(dstTexture->width == srcTexture->width && dstTexture->height == srcTexture->height);
     LOG_ASSERT(srcTexture->samples > 1 && dstTexture->samples == 1);
     LOG_ASSERT(srcTexture->format == dstTexture->format);
-    LOG_ASSERT(!VK_UTILS::IsVkDepthFormat(VK_UTILS::GetVkFormat(srcTexture->format)));
-    LOG_ASSERT(!VK_UTILS::IsVkStencilFormat(VK_UTILS::GetVkFormat(srcTexture->format)));
+    LOG_ASSERT(!VK_UTILS::IsVkDepthFormat(VK_UTILS::TransTextureFormatToVkFormat(srcTexture->format)));
+    LOG_ASSERT(!VK_UTILS::IsVkStencilFormat(VK_UTILS::TransTextureFormatToVkFormat(srcTexture->format)));
     LOG_ASSERT(HasAnyFlag(dstTexture->usage, TextureUsage::BLIT_DST));
     LOG_ASSERT(HasAnyFlag(srcTexture->usage, TextureUsage::BLIT_SRC));
 

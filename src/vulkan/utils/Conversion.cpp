@@ -8,7 +8,7 @@ BEGIN_NS_BACKEND
 
 namespace VK_UTILS {
 
-VkFormat GetVkFormat(ElementType type, bool normalized, bool integer) {
+VkFormat TransElementTypeToVkFormat(ElementType type, bool normalized, bool integer) {
     // 归一化格式只存在于 8/16 位类型，且不区分整数与缩放
     if (normalized) {
         switch (type) {
@@ -65,7 +65,7 @@ VkFormat GetVkFormat(ElementType type, bool normalized, bool integer) {
     return VK_FORMAT_UNDEFINED;
 }
 
-VkFormat GetVkFormat(TextureFormat format) {
+VkFormat TransTextureFormatToVkFormat(TextureFormat format) {
     switch (format) {
         // 每元素 8 位
         CASE_FROM_TO(TextureFormat::R8, VK_FORMAT_R8_UNORM);
@@ -490,7 +490,7 @@ uint8_t GetTexelBlockSize(VkFormat format) {
     }
 }
 
-VkFormat GetVkFormat(PixelDataFormat format, PixelDataType type) {
+VkFormat TransPixelDataFormatToVkFormat(PixelDataFormat format, PixelDataType type) {
     // 这三个类型本身就唯一确定了位布局，与 format 无关，故必须先于 format 判定
     if (type == PixelDataType::USHORT_565) return VK_FORMAT_R5G6B5_UNORM_PACK16;
     if (type == PixelDataType::UINT_2_10_10_10_REV) return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
@@ -547,7 +547,7 @@ VkFormat GetVkFormat(PixelDataFormat format, PixelDataType type) {
     return VK_FORMAT_UNDEFINED;
 }
 
-VkFormat GetVkFormatLinear(VkFormat format) {
+VkFormat TransVkFormatToLinearVkFormat(VkFormat format) {
     switch (format) {
         CASE_FROM_TO(VK_FORMAT_R8_SRGB, VK_FORMAT_R8_UNORM);
         CASE_FROM_TO(VK_FORMAT_R8G8_SRGB, VK_FORMAT_R8G8_UNORM);
@@ -726,7 +726,7 @@ uint32_t GetBytesPerPixel(TextureFormat format) {
     return 0;
 }
 
-VkCompareOp GetCompareOp(SamplerCompareFunc func) {
+VkCompareOp TransSamplerCompareFuncToVkCompareOp(SamplerCompareFunc func) {
     switch (func) {
         CASE_FROM_TO(SamplerCompareFunc::Le, VK_COMPARE_OP_LESS_OR_EQUAL);
         CASE_FROM_TO(SamplerCompareFunc::Ge, VK_COMPARE_OP_GREATER_OR_EQUAL);
@@ -740,7 +740,7 @@ VkCompareOp GetCompareOp(SamplerCompareFunc func) {
     return VK_COMPARE_OP_NEVER;
 }
 
-VkStencilOp GetStencilOp(StencilOperation op) {
+VkStencilOp TransStencilOperationToVkStencilOp(StencilOperation op) {
     switch (op) {
         CASE_FROM_TO(StencilOperation::Keep, VK_STENCIL_OP_KEEP);
         CASE_FROM_TO(StencilOperation::Zero, VK_STENCIL_OP_ZERO);
@@ -754,7 +754,7 @@ VkStencilOp GetStencilOp(StencilOperation op) {
     return VK_STENCIL_OP_KEEP;
 }
 
-VkBlendFactor GetBlendFactor(BlendFunction mode) {
+VkBlendFactor TransBlendFunctionToVkBlendFactor(BlendFunction mode) {
     switch (mode) {
         CASE_FROM_TO(BlendFunction::Zero, VK_BLEND_FACTOR_ZERO);
         CASE_FROM_TO(BlendFunction::One, VK_BLEND_FACTOR_ONE);
@@ -771,7 +771,7 @@ VkBlendFactor GetBlendFactor(BlendFunction mode) {
     return VK_BLEND_FACTOR_ZERO;
 }
 
-VkCullModeFlags GetCullMode(CullingMode mode) {
+VkCullModeFlags TransCullingModeToVkCullModeFlags(CullingMode mode) {
     switch (mode) {
         CASE_FROM_TO(CullingMode::None, VK_CULL_MODE_NONE);
         CASE_FROM_TO(CullingMode::Front, VK_CULL_MODE_FRONT_BIT);
@@ -781,11 +781,11 @@ VkCullModeFlags GetCullMode(CullingMode mode) {
     return VK_CULL_MODE_NONE;
 }
 
-VkFrontFace GetFrontFace(bool inverseFrontFaces) {
+VkFrontFace TransInverseFrontFacesToVkFrontFace(bool inverseFrontFaces) {
     return inverseFrontFaces ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
 }
 
-PixelDataType GetComponentType(VkFormat format) {
+PixelDataType TransVkFormatToPixelDataType(VkFormat format) {
     switch (format) {
         case VK_FORMAT_R8_UNORM:
         case VK_FORMAT_R8_SNORM:
@@ -1012,7 +1012,7 @@ uint32_t GetComponentCount(VkFormat format) {
     }
 }
 
-VkComponentMapping GetSwizzleMap(TextureSwizzle const swizzle[4]) {
+VkComponentMapping TransTextureSwizzleToVkComponentMapping(TextureSwizzle const swizzle[4]) {
     VkComponentMapping  map;
     VkComponentSwizzle *dst = &map.r;
     for (int i = 0; i < 4; ++i, ++dst) {
@@ -1042,7 +1042,7 @@ VkComponentMapping GetSwizzleMap(TextureSwizzle const swizzle[4]) {
     return map;
 }
 
-VkFilter GetFilter(SamplerMinFilter filter) {
+VkFilter TransSamplerMinFilterToVkFilter(SamplerMinFilter filter) {
     switch (filter) {
         CASE_FROM_TO(SamplerMinFilter::Nearest, VK_FILTER_NEAREST);
         CASE_FROM_TO(SamplerMinFilter::Linear, VK_FILTER_LINEAR);
@@ -1054,7 +1054,7 @@ VkFilter GetFilter(SamplerMinFilter filter) {
     return VK_FILTER_NEAREST;
 }
 
-VkFilter GetFilter(SamplerMagFilter filter) {
+VkFilter TransSamplerMagFilterToVkFilter(SamplerMagFilter filter) {
     switch (filter) {
         CASE_FROM_TO(SamplerMagFilter::Nearest, VK_FILTER_NEAREST);
         CASE_FROM_TO(SamplerMagFilter::Linear, VK_FILTER_LINEAR);
@@ -1062,7 +1062,7 @@ VkFilter GetFilter(SamplerMagFilter filter) {
     return VK_FILTER_NEAREST;
 }
 
-VkSamplerMipmapMode GetMipmapMode(SamplerMinFilter filter) {
+VkSamplerMipmapMode TransSamplerMinFilterToVkSamplerMipmapMode(SamplerMinFilter filter) {
     switch (filter) {
         CASE_FROM_TO(SamplerMinFilter::Nearest, VK_SAMPLER_MIPMAP_MODE_NEAREST);
         CASE_FROM_TO(SamplerMinFilter::Linear, VK_SAMPLER_MIPMAP_MODE_NEAREST);
@@ -1074,7 +1074,7 @@ VkSamplerMipmapMode GetMipmapMode(SamplerMinFilter filter) {
     return VK_SAMPLER_MIPMAP_MODE_NEAREST;
 }
 
-VkSamplerAddressMode GetWrapMode(SamplerWrapMode mode) {
+VkSamplerAddressMode TransSamplerWrapModeToVkSamplerAddressMode(SamplerWrapMode mode) {
     switch (mode) {
         CASE_FROM_TO(SamplerWrapMode::Repeat, VK_SAMPLER_ADDRESS_MODE_REPEAT);
         CASE_FROM_TO(SamplerWrapMode::ClampToEdge, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -1083,7 +1083,7 @@ VkSamplerAddressMode GetWrapMode(SamplerWrapMode mode) {
     return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 }
 
-VkBool32 GetCompareEnable(SamplerCompareMode mode) {
+VkBool32 TransSamplerCompareModeToVkBool32(SamplerCompareMode mode) {
     return mode == SamplerCompareMode::None ? VK_FALSE : VK_TRUE;
 }
 
@@ -1102,14 +1102,14 @@ float GetMaxLod(SamplerMinFilter filter) {
     return 0.25f;
 }
 
-VkShaderStageFlags GetShaderStageFlags(ShaderStageFlags stageFlags) {
+VkShaderStageFlags TransShaderStageFlagsToVkShaderStageFlags(ShaderStageFlags stageFlags) {
     VkShaderStageFlags flags = 0x0;
     if (static_cast<uint8_t>(stageFlags & ShaderStageFlags::VERTEX) != 0) flags |= VK_SHADER_STAGE_VERTEX_BIT;
     if (static_cast<uint8_t>(stageFlags & ShaderStageFlags::FRAGMENT) != 0) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     return flags;
 }
 
-VkSamplerYcbcrModelConversion GetYcbcrModelConversion(SamplerYcbcrModelConversion model) {
+VkSamplerYcbcrModelConversion TransSamplerYcbcrModelConversionToVkSamplerYcbcrModelConversion(SamplerYcbcrModelConversion model) {
     switch (model) {
         CASE_FROM_TO(SamplerYcbcrModelConversion::RgbIdentity, VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY);
         CASE_FROM_TO(SamplerYcbcrModelConversion::YcbcrIdentity, VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY);
@@ -1121,7 +1121,7 @@ VkSamplerYcbcrModelConversion GetYcbcrModelConversion(SamplerYcbcrModelConversio
     return VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY;
 }
 
-VkSamplerYcbcrRange GetYcbcrRange(SamplerYcbcrRange range) {
+VkSamplerYcbcrRange TransSamplerYcbcrRangeToVkSamplerYcbcrRange(SamplerYcbcrRange range) {
     switch (range) {
         CASE_FROM_TO(SamplerYcbcrRange::ItuFull, VK_SAMPLER_YCBCR_RANGE_ITU_FULL);
         CASE_FROM_TO(SamplerYcbcrRange::ItuNarrow, VK_SAMPLER_YCBCR_RANGE_ITU_NARROW);
@@ -1130,7 +1130,7 @@ VkSamplerYcbcrRange GetYcbcrRange(SamplerYcbcrRange range) {
     return VK_SAMPLER_YCBCR_RANGE_ITU_FULL;
 }
 
-VkChromaLocation GetChromaLocation(ChromaLocation loc) {
+VkChromaLocation TransChromaLocationToVkChromaLocation(ChromaLocation loc) {
     switch (loc) {
         CASE_FROM_TO(ChromaLocation::CositedEven, VK_CHROMA_LOCATION_COSITED_EVEN);
         CASE_FROM_TO(ChromaLocation::Midpoint, VK_CHROMA_LOCATION_MIDPOINT);
@@ -1139,7 +1139,7 @@ VkChromaLocation GetChromaLocation(ChromaLocation loc) {
     return VK_CHROMA_LOCATION_COSITED_EVEN;
 }
 
-SamplerYcbcrModelConversion GetYcbcrModelConversionFilament(VkSamplerYcbcrModelConversion model) {
+SamplerYcbcrModelConversion TransVkSamplerYcbcrModelConversionToSamplerYcbcrModelConversion(VkSamplerYcbcrModelConversion model) {
     switch (model) {
         CASE_FROM_TO(VK_SAMPLER_YCBCR_MODEL_CONVERSION_RGB_IDENTITY, SamplerYcbcrModelConversion::RgbIdentity);
         CASE_FROM_TO(VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_IDENTITY, SamplerYcbcrModelConversion::YcbcrIdentity);
@@ -1152,7 +1152,7 @@ SamplerYcbcrModelConversion GetYcbcrModelConversionFilament(VkSamplerYcbcrModelC
     }
 }
 
-SamplerYcbcrRange GetYcbcrRangeFilament(VkSamplerYcbcrRange range) {
+SamplerYcbcrRange TransVkSamplerYcbcrRangeToSamplerYcbcrRange(VkSamplerYcbcrRange range) {
     switch (range) {
         CASE_FROM_TO(VK_SAMPLER_YCBCR_RANGE_ITU_FULL, SamplerYcbcrRange::ItuFull);
         CASE_FROM_TO(VK_SAMPLER_YCBCR_RANGE_ITU_NARROW, SamplerYcbcrRange::ItuNarrow);
@@ -1162,7 +1162,7 @@ SamplerYcbcrRange GetYcbcrRangeFilament(VkSamplerYcbcrRange range) {
     }
 }
 
-ChromaLocation GetChromaLocationFilament(VkChromaLocation loc) {
+ChromaLocation TransVkChromaLocationToChromaLocation(VkChromaLocation loc) {
     switch (loc) {
         CASE_FROM_TO(VK_CHROMA_LOCATION_COSITED_EVEN, ChromaLocation::CositedEven);
         CASE_FROM_TO(VK_CHROMA_LOCATION_MIDPOINT, ChromaLocation::Midpoint);
@@ -1172,7 +1172,7 @@ ChromaLocation GetChromaLocationFilament(VkChromaLocation loc) {
     }
 }
 
-TextureSwizzle GetSwizzleFilament(VkComponentSwizzle c, uint8_t rgbaIndex) {
+TextureSwizzle TransVkComponentSwizzleToTextureSwizzle(VkComponentSwizzle c, uint8_t rgbaIndex) {
     switch (c) {
         CASE_FROM_TO(VK_COMPONENT_SWIZZLE_ZERO, TextureSwizzle::SubstituteZero);
         CASE_FROM_TO(VK_COMPONENT_SWIZZLE_ONE, TextureSwizzle::SubstituteOne);

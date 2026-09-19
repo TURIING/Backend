@@ -12,17 +12,17 @@ BEGIN_NS_BACKEND
 
 namespace VK_UTILS {
 
-VkFormat GetVkFormat(ElementType type, bool normalized, bool integer);
-VkFormat GetVkFormat(TextureFormat format);
+VkFormat TransElementTypeToVkFormat(ElementType type, bool normalized, bool integer);
+VkFormat TransTextureFormatToVkFormat(TextureFormat format);
 
 // 把 PixelBufferDescriptor 的「格式 + 类型」对转换为 VkFormat。
 // 只返回满足 VK_FORMAT_FEATURE_BLIT_SRC_BIT 的格式——按 Vulkan 规范的必备格式支持表，
 // 只有这些格式可用于格式转换；请求落在表外时返回 VK_FORMAT_UNDEFINED
-VkFormat GetVkFormat(PixelDataFormat format, PixelDataType type);
+VkFormat TransPixelDataFormatToVkFormat(PixelDataFormat format, PixelDataType type);
 
 // 把 sRGB 格式折算为对应的 UNORM 格式；非 sRGB 格式原样返回。
 // sRGB 与实际位布局正交，故判断是否需要基于 blit 的转换时要用它
-VkFormat GetVkFormatLinear(VkFormat format);
+VkFormat TransVkFormatToLinearVkFormat(VkFormat format);
 
 // 与前端 computeTextureDataSize 的区别：那里接收对外的纹理格式，且能计入字节对齐
 uint32_t GetBytesPerPixel(TextureFormat format);
@@ -30,35 +30,35 @@ uint32_t GetBytesPerPixel(TextureFormat format);
 // 供 staging buffer 对齐纹理行使用
 uint8_t GetTexelBlockSize(VkFormat format);
 
-VkCompareOp GetCompareOp(SamplerCompareFunc func);
-VkStencilOp GetStencilOp(StencilOperation op);
-VkBlendFactor GetBlendFactor(BlendFunction mode);
-VkCullModeFlags GetCullMode(CullingMode mode);
-VkFrontFace GetFrontFace(bool inverseFrontFaces);
-PixelDataType GetComponentType(VkFormat format);
+VkCompareOp TransSamplerCompareFuncToVkCompareOp(SamplerCompareFunc func);
+VkStencilOp TransStencilOperationToVkStencilOp(StencilOperation op);
+VkBlendFactor TransBlendFunctionToVkBlendFactor(BlendFunction mode);
+VkCullModeFlags TransCullingModeToVkCullModeFlags(CullingMode mode);
+VkFrontFace TransInverseFrontFacesToVkFrontFace(bool inverseFrontFaces);
+PixelDataType TransVkFormatToPixelDataType(VkFormat format);
 uint32_t GetComponentCount(VkFormat format);
-VkComponentMapping GetSwizzleMap(TextureSwizzle const swizzle[4]);
-VkShaderStageFlags GetShaderStageFlags(ShaderStageFlags stageFlags);
+VkComponentMapping TransTextureSwizzleToVkComponentMapping(TextureSwizzle const swizzle[4]);
+VkShaderStageFlags TransShaderStageFlagsToVkShaderStageFlags(ShaderStageFlags stageFlags);
 
 // Platform 创建外部采样器时使用
-VkFilter GetFilter(SamplerMinFilter filter);
-VkFilter GetFilter(SamplerMagFilter filter);
-VkSamplerMipmapMode GetMipmapMode(SamplerMinFilter filter);
-VkSamplerAddressMode GetWrapMode(SamplerWrapMode mode);
-VkBool32 GetCompareEnable(SamplerCompareMode mode);
+VkFilter TransSamplerMinFilterToVkFilter(SamplerMinFilter filter);
+VkFilter TransSamplerMagFilterToVkFilter(SamplerMagFilter filter);
+VkSamplerMipmapMode TransSamplerMinFilterToVkSamplerMipmapMode(SamplerMinFilter filter);
+VkSamplerAddressMode TransSamplerWrapModeToVkSamplerAddressMode(SamplerWrapMode mode);
+VkBool32 TransSamplerCompareModeToVkBool32(SamplerCompareMode mode);
 float GetMaxLod(SamplerMinFilter filter);
 
-VkSamplerYcbcrModelConversion GetYcbcrModelConversion(SamplerYcbcrModelConversion model);
-VkSamplerYcbcrRange GetYcbcrRange(SamplerYcbcrRange range);
-VkChromaLocation GetChromaLocation(ChromaLocation loc);
+VkSamplerYcbcrModelConversion TransSamplerYcbcrModelConversionToVkSamplerYcbcrModelConversion(SamplerYcbcrModelConversion model);
+VkSamplerYcbcrRange TransSamplerYcbcrRangeToVkSamplerYcbcrRange(SamplerYcbcrRange range);
+VkChromaLocation TransChromaLocationToVkChromaLocation(ChromaLocation loc);
 
 // 由 Vulkan 原生取值反查本项目类型，供回读采样器状态使用
-SamplerYcbcrModelConversion GetYcbcrModelConversionFilament(VkSamplerYcbcrModelConversion model);
-SamplerYcbcrRange GetYcbcrRangeFilament(VkSamplerYcbcrRange range);
-ChromaLocation GetChromaLocationFilament(VkChromaLocation loc);
-TextureSwizzle GetSwizzleFilament(VkComponentSwizzle c, uint8_t rgbaIndex);
+SamplerYcbcrModelConversion TransVkSamplerYcbcrModelConversionToSamplerYcbcrModelConversion(VkSamplerYcbcrModelConversion model);
+SamplerYcbcrRange TransVkSamplerYcbcrRangeToSamplerYcbcrRange(VkSamplerYcbcrRange range);
+ChromaLocation TransVkChromaLocationToChromaLocation(VkChromaLocation loc);
+TextureSwizzle TransVkComponentSwizzleToTextureSwizzle(VkComponentSwizzle c, uint8_t rgbaIndex);
 
-inline VkImageViewType GetViewType(SamplerType target) {
+inline VkImageViewType TransSamplerTypeToVkImageViewType(SamplerType target) {
     switch (target) {
         case SamplerType::SAMPLER_CUBEMAP:
             return VK_IMAGE_VIEW_TYPE_CUBE;
@@ -73,7 +73,7 @@ inline VkImageViewType GetViewType(SamplerType target) {
     }
 }
 
-inline VkPrimitiveTopology GetPrimitiveTopology(PrimitiveType pt) noexcept {
+inline VkPrimitiveTopology TransPrimitiveTypeToVkPrimitiveTopology(PrimitiveType pt) noexcept {
     switch (pt) {
         case PrimitiveType::POINTS:
             return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;

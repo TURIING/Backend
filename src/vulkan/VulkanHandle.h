@@ -210,7 +210,7 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, public Resource
     // vkLayout 的生命周期归 layout cache，本对象只借用
     ~VulkanDescriptorSetLayout() override = default;
 
-    NODISCARD VkDescriptorSetLayout GetVkLayout() const noexcept { return m_vkLayout; }
+    NODISCARD VkDescriptorSetLayout TransVulkanLayoutToVkImageLayout() const noexcept { return m_vkLayout; }
 
     NODISCARD VkDescriptorSetLayout GetExternalSamplerVkLayout() const noexcept { return m_externalSamplerVkLayout; }
 

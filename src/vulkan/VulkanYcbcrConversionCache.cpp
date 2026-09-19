@@ -22,12 +22,12 @@ VkSamplerYcbcrConversion VulkanYcbcrConversionCache::GetConversion(Params params
     VkSamplerYcbcrConversionCreateInfo const conversionInfo{
         .sType         = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
         .format        = params.format,
-        .ycbcrModel    = VK_UTILS::GetYcbcrModelConversion(chroma.ycbcrModel),
-        .ycbcrRange    = VK_UTILS::GetYcbcrRange(chroma.ycbcrRange),
-        .components    = VK_UTILS::GetSwizzleMap(swizzleArray),
-        .xChromaOffset = VK_UTILS::GetChromaLocation(chroma.xChromaOffset),
-        .yChromaOffset = VK_UTILS::GetChromaLocation(chroma.yChromaOffset),
-        .chromaFilter  = VK_UTILS::GetFilter(chroma.chromaFilter),
+        .ycbcrModel    = VK_UTILS::TransSamplerYcbcrModelConversionToVkSamplerYcbcrModelConversion(chroma.ycbcrModel),
+        .ycbcrRange    = VK_UTILS::TransSamplerYcbcrRangeToVkSamplerYcbcrRange(chroma.ycbcrRange),
+        .components    = VK_UTILS::TransTextureSwizzleToVkComponentMapping(swizzleArray),
+        .xChromaOffset = VK_UTILS::TransChromaLocationToVkChromaLocation(chroma.xChromaOffset),
+        .yChromaOffset = VK_UTILS::TransChromaLocationToVkChromaLocation(chroma.yChromaOffset),
+        .chromaFilter  = VK_UTILS::TransSamplerMagFilterToVkFilter(chroma.chromaFilter),
     };
 
     VkSamplerYcbcrConversion conversion = VK_NULL_HANDLE;

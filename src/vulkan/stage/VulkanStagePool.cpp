@@ -44,7 +44,7 @@ VulkanStageImage::ResourcePtr VulkanStagePool::AcquireStageImage(PixelDataFormat
         return m_resourceManager->AllocateAndConstruct<VulkanStageImage::Resource>(image, std::move(recycleFn));
     };
 
-    VkFormat const vkformat = VK_UTILS::GetVkFormat(format, type);
+    VkFormat const vkformat = VK_UTILS::TransPixelDataFormatToVkFormat(format, type);
     for (auto stageImage : m_freeImages) {
         if (stageImage->GetFormat() == vkformat && stageImage->GetWidth() == width && stageImage->GetHeight() == height) {
             m_freeImages.erase(stageImage);
@@ -78,7 +78,7 @@ VulkanStageImage::ResourcePtr VulkanStagePool::AcquireStageImage(PixelDataFormat
     assert_invariant(result == VK_SUCCESS);
 
     if (m_commands != nullptr) {
-        VkImageAspectFlags const aspectFlags = VK_UTILS::GetImageAspect(vkformat);
+        VkImageAspectFlags const aspectFlags = VK_UTILS::TransVkFormatToVkImageAspectFlags(vkformat);
         VkCommandBuffer const    cmdbuffer   = m_commands->Get().Buffer();
 
         // 图像随后会被 blit 到目标纹理，故直接进入 TRANSFER_SRC

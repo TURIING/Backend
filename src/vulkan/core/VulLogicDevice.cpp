@@ -12,7 +12,7 @@ BEGIN_NS_BACKEND
 
 namespace {
 
-VkQueueGlobalPriorityKHR GetVkQueueGlobalPriority(GpuContextPriority priority) {
+VkQueueGlobalPriorityKHR TransGpuContextPriorityToVkQueueGlobalPriority(GpuContextPriority priority) {
     switch (priority) {
         CASE_FROM_TO(GpuContextPriority::Low, VK_QUEUE_GLOBAL_PRIORITY_LOW_KHR);
         CASE_FROM_TO(GpuContextPriority::Medium, VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR);
@@ -119,7 +119,7 @@ VulLogicDevicePtr VulLogicDevice::Builder::Build() {
     bool const                               requiresGpuPriority     = m_pImpl->m_requestedFeatures.priority != GpuContextPriority::Default;
     VkDeviceQueueGlobalPriorityCreateInfoKHR queuePriorityCreateInfo = {
         .sType          = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR,
-        .globalPriority = GetVkQueueGlobalPriority(m_pImpl->m_requestedFeatures.priority),
+        .globalPriority = TransGpuContextPriorityToVkQueueGlobalPriority(m_pImpl->m_requestedFeatures.priority),
     };
 
     VkDeviceQueueCreateInfo deviceQueueCreateInfo[2] = {};

@@ -82,7 +82,7 @@ VulkanTexturePtr InitMsaaTexture(const VulkanTexturePtr& texture, VkDevice devic
     return msTexture;
 }
 
-VkFormat GetVkFormat(ElementType type, bool normalized, bool integer) noexcept {
+VkFormat TransElementTypeToVkFormat(ElementType type, bool normalized, bool integer) noexcept {
     if (normalized) {
         switch (type) {
             CASE_FROM_TO(ElementType::BYTE, VK_FORMAT_R8_SNORM);
@@ -155,7 +155,7 @@ VulkanVertexBufferInfo::VulkanVertexBufferInfo(uint8_t bufferCount, uint8_t attr
         Attribute  attrib       = attributes[attribIndex];
         bool const isInteger    = attrib.flags & Attribute::FLAG_INTEGER;
         bool const isNormalized = attrib.flags & Attribute::FLAG_NORMALIZED;
-        VkFormat   vkformat     = GetVkFormat(attrib.type, isNormalized, isInteger);
+        VkFormat   vkformat     = TransElementTypeToVkFormat(attrib.type, isNormalized, isInteger);
 
         // 未绑缓冲的属性复用位置缓冲布局：顶点着色器按 vec4 声明属性，位置元素至少 32bit
         if (attrib.buffer == Attribute::BUFFER_UNUSED) {
@@ -500,7 +500,7 @@ VulkanDescriptorSetLayout::Bitmask VulkanDescriptorSetLayout::Bitmask::FromLayou
 }
 
 VulkanDescriptorSet::VulkanDescriptorSet(VulkanDescriptorSetLayoutPtr layout, OnRecycle&& onRecycleFn, VkDescriptorSet vkSet)
-    : boundLayout(layout->GetVkLayout()),
+    : boundLayout(layout->TransVulkanLayoutToVkImageLayout()),
       dynamicUboMask(layout->bitmask.dynamicUbo),
       uniqueDynamicUboCount(layout->count.dynamicUbo),
       m_layout(std::move(layout)),

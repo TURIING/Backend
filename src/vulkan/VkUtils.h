@@ -78,7 +78,7 @@ inline bool IsVkStencilFormat(VkFormat format) {
     case r:            \
         return #r
 
-static const char *vk_result_string(VkResult code) {
+static const char *TransVkResultToString(VkResult code) {
     switch (code) {
         ENUM_TO_STR(VK_SUCCESS);
         ENUM_TO_STR(VK_NOT_READY);
@@ -187,7 +187,7 @@ static const char *vk_result_string(VkResult code) {
 
 static void checkVkResult(VkResult result, const char *filename, uint32_t line, const char *func) {
     if (result != VK_SUCCESS) {
-        LOG_CRITICAL("[{}:{}]: {} ----> {}", filename, line, func, vk_result_string(result));
+        LOG_CRITICAL("[{}:{}]: {} ----> {}", filename, line, func, TransVkResultToString(result));
     }
 }
 
@@ -228,6 +228,6 @@ template <>
 struct fmt::formatter<VkResult> : fmt::formatter<std::string_view> {
     template <typename Context>
     auto format(VkResult result, Context &ctx) const {
-        return fmt::formatter<std::string_view>::format(NS_BD::VK_UTILS::vk_result_string(result), ctx);
+        return fmt::formatter<std::string_view>::format(NS_BD::VK_UTILS::TransVkResultToString(result), ctx);
     }
 };

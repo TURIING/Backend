@@ -2,7 +2,7 @@
 
 #include "vulkan/VulkanHandle.h"
 #include "vulkan/VulkanTexture.h"
-#include "vulkan/utils/Conversion.h"  // GetComponentType / GetComponentCount
+#include "vulkan/utils/Conversion.h"  // TransVkFormatToPixelDataType / GetComponentCount
 #include "vulkan/utils/Image.h"
 
 #include "Utils/Log.h"
@@ -229,7 +229,7 @@ void VulkanReadPixels::Run(VulkanTexturePtr srcTexture, uint8_t level, uint16_t 
     VkCommandPool const commandPool = m_commandPool;
 
     VkFormat const          srcFormat  = srcTexture->GetFormat();
-    VkImageAspectFlags const aspectMask = VK_UTILS::GetImageAspect(srcFormat);
+    VkImageAspectFlags const aspectMask = VK_UTILS::TransVkFormatToVkImageAspectFlags(srcFormat);
 
     bool const swizzle = srcFormat == VK_FORMAT_B8G8R8A8_UNORM || srcFormat == VK_FORMAT_B8G8R8A8_SRGB;
 
@@ -243,7 +243,7 @@ void VulkanReadPixels::Run(VulkanTexturePtr srcTexture, uint8_t level, uint16_t 
     }
 
     uint32_t       componentCount = VK_UTILS::GetComponentCount(srcFormat);
-    PixelDataType  componentType  = VK_UTILS::GetComponentType(srcFormat);
+    PixelDataType  componentType  = VK_UTILS::TransVkFormatToPixelDataType(srcFormat);
 
     if (isDepth) {
         // 深度/模板读回时 Vulkan 给出紧密排列的单分量数据
@@ -383,7 +383,7 @@ void VulkanReadPixels::Run(VulkanTexturePtr srcTexture, uint8_t level, uint16_t 
     };
 
     // 只把指定 aspect 拷进紧密排列的暂存缓冲
-    vkCmdCopyImageToBuffer(cmdBuffer, srcTexture->GetImage(), VK_UTILS::GetVkLayout(VulkanLayout::TRANSFER_SRC), stagingBuffer, 1, &region);
+    vkCmdCopyImageToBuffer(cmdBuffer, srcTexture->GetImage(), VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::TRANSFER_SRC), stagingBuffer, 1, &region);
 
     srcTexture->TransitionLayout(cmdBuffer, srcRange, srcLayout);
 

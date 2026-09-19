@@ -122,7 +122,7 @@ struct VulkanTexture : public HwTexture, public Resource {
     void UpdateImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height, uint32_t depth, uint32_t xoffset,
                      uint32_t yoffset, uint32_t zoffset, uint32_t miplevel);
 
-    NODISCARD VkImageViewType GetViewType() const { return m_state->m_viewType; }
+    NODISCARD VkImageViewType TransSamplerTypeToVkImageViewType() const { return m_state->m_viewType; }
 
     NODISCARD VkImageSubresourceRange const& GetPrimaryViewRange() const { return m_primaryViewRange; }
 
@@ -146,7 +146,7 @@ struct VulkanTexture : public HwTexture, public Resource {
 
     NODISCARD VulkanLayout GetLayout(uint32_t layer, uint32_t level) const;
 
-    NODISCARD VkImageAspectFlags GetImageAspect() const;
+    NODISCARD VkImageAspectFlags TransVkFormatToVkImageAspectFlags() const;
 
     NODISCARD bool IsTransientAttachment() const { return (m_state->m_usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) != 0; }
 

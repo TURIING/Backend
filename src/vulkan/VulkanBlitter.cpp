@@ -41,8 +41,8 @@ void BlitFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, VkFilter
         .dstSubresource = { aspect, dst.level, dst.layer, 1 },
         .dstOffsets     = { dstRect[0], dstRect[1] },
     } };
-    vkCmdBlitImage(cmdBuffer, src.GetImage(), VK_UTILS::GetVkLayout(VulkanLayout::TRANSFER_SRC), dst.GetImage(),
-                   VK_UTILS::GetVkLayout(VulkanLayout::TRANSFER_DST), 1, blitRegions, filter);
+    vkCmdBlitImage(cmdBuffer, src.GetImage(), VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::TRANSFER_SRC), dst.GetImage(),
+                   VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::TRANSFER_DST), 1, blitRegions, filter);
 
     // 拷贝结束后把两侧恢复到各自「按用途应有的」布局，调用方无须感知中间态
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
@@ -81,8 +81,8 @@ void ResolveFast(VulkanCommandBuffer* commands, VkImageAspectFlags aspect, Vulka
         .dstOffset      = { 0, 0, 0 },
         .extent         = { extent.width, extent.height, 1 },
     } };
-    vkCmdResolveImage(cmdBuffer, src.GetImage(), VK_UTILS::GetVkLayout(src.GetLayout()), dst.GetImage(),
-                      VK_UTILS::GetVkLayout(VulkanLayout::TRANSFER_DST), 1, resolveRegions);
+    vkCmdResolveImage(cmdBuffer, src.GetImage(), VK_UTILS::TransVulkanLayoutToVkImageLayout(src.GetLayout()), dst.GetImage(),
+                      VK_UTILS::TransVulkanLayoutToVkImageLayout(VulkanLayout::TRANSFER_DST), 1, resolveRegions);
 
     if (oldSrcLayout == VulkanLayout::UNDEFINED) {
         oldSrcLayout = src.texture->GetDefaultLayout();
@@ -101,7 +101,7 @@ VulkanBlitter::VulkanBlitter(VkPhysicalDevice physicalDevice, const VulkanComman
 
 void VulkanBlitter::Resolve(VulkanAttachment dst, VulkanAttachment src) {
     // 源与目标的 aspect 必须一致
-    VkImageAspectFlags const aspect = src.texture->GetImageAspect();
+    VkImageAspectFlags const aspect = src.texture->TransVkFormatToVkImageAspectFlags();
 
     LOG_ASSERT(!(aspect & VK_IMAGE_ASPECT_DEPTH_BIT));
 
@@ -145,7 +145,7 @@ void VulkanBlitter::Blit(VkFilter filter, VulkanAttachment dst, VkOffset3D const
     }
 
     // 源与目标的 aspect 必须一致
-    VkImageAspectFlags const aspect = src.texture->GetImageAspect();
+    VkImageAspectFlags const aspect = src.texture->TransVkFormatToVkImageAspectFlags();
     VulkanCommandBuffer&     commands = m_commands->Get();
     commands.Acquire(src.texture);
     commands.Acquire(dst.texture);
